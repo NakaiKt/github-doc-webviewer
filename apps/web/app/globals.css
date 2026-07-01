@@ -1,0 +1,119 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #1f2328;
+}
+
+.dark {
+  --background: #16181d;
+  --foreground: #e6e8eb;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+    "Noto Sans JP", "Yu Gothic UI", sans-serif;
+}
+
+/* ---- Milkdown Crepe テーマ変数（frameテーマ相当をライト/ダークで切替） ---- */
+.milkdown {
+  --crepe-color-background: transparent;
+  --crepe-color-on-background: #1f2328;
+  --crepe-color-surface: #f7f7f7;
+  --crepe-color-surface-low: #ededed;
+  --crepe-color-on-surface: #1c1c1c;
+  --crepe-color-on-surface-variant: #4d4d4d;
+  --crepe-color-outline: #a8a8a8;
+  --crepe-color-primary: #333333;
+  --crepe-color-secondary: #dbeafe;
+  --crepe-color-on-secondary: #1e3a5f;
+  --crepe-color-inverse: #f0f0f0;
+  --crepe-color-on-inverse: #1a1a1a;
+  --crepe-color-inline-code: #c2410c;
+  --crepe-color-error: #ba1a1a;
+  --crepe-color-hover: #eceef0;
+  --crepe-color-selected: #e2e4e8;
+  --crepe-color-inline-area: #eceef0;
+  --crepe-font-title: inherit;
+  --crepe-font-default: inherit;
+  --crepe-font-code: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --crepe-shadow-1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  --crepe-shadow-2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3);
+  padding-bottom: 4rem;
+}
+
+.dark .milkdown {
+  --crepe-color-on-background: #e6e8eb;
+  --crepe-color-surface: #1c1f26;
+  --crepe-color-surface-low: #22252d;
+  --crepe-color-on-surface: #d1d4d9;
+  --crepe-color-on-surface-variant: #a9adb4;
+  --crepe-color-outline: #757a83;
+  --crepe-color-primary: #b5bac2;
+  --crepe-color-secondary: #274a6d;
+  --crepe-color-on-secondary: #d6e6f7;
+  --crepe-color-inverse: #e5e5e5;
+  --crepe-color-on-inverse: #2a2a2a;
+  --crepe-color-inline-code: #ff8a65;
+  --crepe-color-error: #ff6666;
+  --crepe-color-hover: #232730;
+  --crepe-color-selected: #2f3440;
+  --crepe-color-inline-area: #2b2f38;
+  --crepe-shadow-1: 0px 1px 2px 0px rgba(0, 0, 0, 0.5), 0px 1px 3px 1px rgba(0, 0, 0, 0.35);
+  --crepe-shadow-2: 0px 1px 2px 0px rgba(0, 0, 0, 0.5), 0px 2px 6px 2px rgba(0, 0, 0, 0.35);
+}
+
+.milkdown .ProseMirror {
+  padding: 0 0 2rem 0;
+}
+
+/* ---- GitHub Alerts ---- */
+.md-alert {
+  border-left: 4px solid var(--alert-color);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--alert-color) 6%, transparent);
+}
+.md-alert .md-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--alert-color);
+  margin-bottom: 0.25rem;
+}
+.md-alert-note { --alert-color: #0969da; }
+.md-alert-tip { --alert-color: #1a7f37; }
+.md-alert-important { --alert-color: #8250df; }
+.md-alert-warning { --alert-color: #9a6700; }
+.md-alert-caution { --alert-color: #cf222e; }
+.dark .md-alert-note { --alert-color: #4493f8; }
+.dark .md-alert-tip { --alert-color: #3fb950; }
+.dark .md-alert-important { --alert-color: #ab7df8; }
+.dark .md-alert-warning { --alert-color: #d29922; }
+.dark .md-alert-caution { --alert-color: #f85149; }
+
+/* 読みやすさ: proseの微調整 */
+.readview {
+  max-width: 48rem;
+}
+.readview :where(pre) {
+  border-radius: 8px;
+}
+
+/* mermaid図の中央寄せ */
+.mermaid-diagram svg {
+  margin: 0 auto;
+  max-width: 100%;
+}

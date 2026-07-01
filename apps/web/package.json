@@ -1,0 +1,37 @@
+{
+  "name": "@docvault/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@docvault/core": "workspace:*",
+    "@milkdown/crepe": "^7.15.5",
+    "highlight.js": "^11.11.1",
+    "lucide-react": "^0.525.0",
+    "mermaid": "^11.12.1",
+    "minisearch": "^7.2.0",
+    "next": "^15.5.10",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "rehype-slug": "^6.0.0",
+    "remark-gemoji": "^8.0.0",
+    "remark-gfm": "^4.0.1",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.16",
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tailwindcss": "^4.1.16",
+    "typescript": "^5.7.0"
+  }
+}

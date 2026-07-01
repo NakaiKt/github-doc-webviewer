@@ -1,0 +1,12 @@
+{
+  "name": "github-doc-webviewer",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @docvault/web dev",
+    "build": "pnpm --filter @docvault/web build",
+    "start": "pnpm --filter @docvault/web start",
+    "test": "pnpm --filter @docvault/core test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
