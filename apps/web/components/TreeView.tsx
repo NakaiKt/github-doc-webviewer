@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, FileText, FolderClosed, FolderOpen, Plus } from "lucide-react";
-import { basename, docTitle, joinPath } from "@docvault/core";
+import { ChevronDown, ChevronRight, FileText, FolderClosed, FolderOpen, FolderPlus, Plus } from "lucide-react";
+import { basename, joinPath } from "@docvault/core";
 import { useStore } from "@/lib/store";
 import { buildTree, type TreeFolder } from "@/lib/tree";
 
@@ -12,15 +12,7 @@ import { buildTree, type TreeFolder } from "@/lib/tree";
  */
 export default function TreeView({ onNewDoc }: { onNewDoc: (dir: string) => void }) {
   const files = useStore((s) => s.files);
-  const tree = useMemo(
-    () =>
-      buildTree(Object.keys(files), (p) => {
-        const content = files[p]?.content;
-        const fallback = basename(p).replace(/\.(md|markdown)$/, "");
-        return content ? docTitle(content, fallback) : fallback;
-      }),
-    [files]
-  );
+  const tree = useMemo(() => buildTree(Object.keys(files)), [files]);
   const [dragOverRoot, setDragOverRoot] = useState(false);
 
   const onDropToRoot = (e: React.DragEvent) => {
@@ -106,6 +98,19 @@ function FolderNode({
             <FolderClosed className="h-4 w-4 shrink-0 text-amber-500" />
           )}
           <span className="truncate">{folder.name}</span>
+        </button>
+        <button
+          onClick={() => {
+            const name = window.prompt(`「${folder.name}」内に作成するフォルダ名`);
+            if (name?.trim()) {
+              void useStore.getState().createFolder(joinPath(folder.path, name.trim()));
+              setOpen(true);
+            }
+          }}
+          title={`${folder.name} 内に新規フォルダ`}
+          className="hidden rounded p-0.5 text-neutral-400 group-hover:block hover:bg-neutral-300 dark:hover:bg-neutral-700"
+        >
+          <FolderPlus className="h-3.5 w-3.5" />
         </button>
         <button
           onClick={() => onNewDoc(folder.path)}

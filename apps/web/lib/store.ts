@@ -75,6 +75,7 @@ interface DocVaultState {
   openDatabase: () => void;
   ensureDocId: (path: string) => string | null;
   createDoc: (dir: string, title: string, templatePath?: string | null) => Promise<string | null>;
+  createFolder: (path: string) => void;
   deleteDoc: (path: string) => Promise<void>;
   moveDoc: (oldPath: string, newPath: string) => Promise<boolean>;
   uploadAsset: (fileName: string, base64: string) => string;
@@ -89,6 +90,15 @@ const BRANCH = "main";
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+// pull/push/移動/削除などGitHubへの書き込みを伴う操作を直列化するキュー。
+// 並走すると自分のコミット同士がref更新で衝突し、偽の競合ダイアログにつながる。
+let opQueue: Promise<unknown> = Promise.resolve();
+function runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+  const run = opQueue.then(fn, fn);
+  opQueue = run.catch(() => {});
+  return run;
+}
 
 /** 編集停止後のデバウンスpush（連続コミット防止） */
 const PUSH_DEBOUNCE_MS = 5000;
@@ -180,18 +190,15 @@ export const useStore = create<DocVaultState>((set, get) => {
     const prev = get().files;
     const next: Record<string, FileEntry> = {};
     const toFetch: Array<{ path: string; sha: string }> = [];
+    const remoteShas = new Map<string, string>();
 
     for (const e of entries) {
       if (e.type !== "blob") continue;
+      remoteShas.set(e.path, e.sha);
       const isMd = isDocPath(e.path);
       const old = prev[e.path];
-      if (old && old.sha === e.sha) {
+      if (old && (old.sha === e.sha || old.dirty)) {
         next[e.path] = old;
-        continue;
-      }
-      if (old?.dirty) {
-        // ローカル編集中にリモートも更新された → 競合候補としてマーク
-        next[e.path] = { ...old, remoteChanged: true, remoteSha: e.sha };
         continue;
       }
       next[e.path] = {
@@ -209,18 +216,29 @@ export const useStore = create<DocVaultState>((set, get) => {
       if (isMd) toFetch.push({ path: e.path, sha: e.sha });
     }
 
-    // リモートに存在しないがローカルでdirtyなファイル（新規作成 or リモートで削除済み）は残す
-    for (const [path, entry] of Object.entries(prev)) {
-      if (!next[path] && entry.dirty) {
-        next[path] = { ...entry, sha: null };
-      }
-    }
-
     await mapLimit(toFetch, 8, async ({ path, sha }) => {
       const text = await client.getBlobText(ref, sha);
       const entry = next[path];
       if (entry) next[path] = { ...entry, content: text };
     });
+
+    // blob取得のawait中にユーザーが編集した可能性があるため、
+    // 「pull完了時点の最新state」を基準にdirtyファイルをマージし直す
+    // （そうしないと取得中のキー入力がpull結果で巻き戻る）。
+    const latest = get().files;
+    for (const [path, le] of Object.entries(latest)) {
+      if (!le.dirty) continue;
+      const remoteSha = remoteShas.get(path);
+      if (remoteSha == null) {
+        // リモートに存在しない（ローカル新規 or リモートで削除）→ 次のpushで作成される
+        next[path] = { ...le, sha: null, remoteChanged: false, remoteSha: null };
+      } else if (le.sha === remoteSha) {
+        next[path] = le;
+      } else {
+        // ローカル編集中にリモートも更新された → 競合候補としてマーク
+        next[path] = { ...le, remoteChanged: true, remoteSha };
+      }
+    }
 
     set({ headSha: remoteHead, lastSyncAt: Date.now() });
     setFiles(next);
@@ -286,8 +304,11 @@ export const useStore = create<DocVaultState>((set, get) => {
     get().setToast("同期に失敗しました。時間をおいて再試行してください");
   };
 
-  /** 即時に複数ファイルの変更を1コミットでpushする（移動・削除用）。競合時はfalse。 */
-  const commitNow = async (message: string, changes: CommitChange[]): Promise<Map<string, string> | null> => {
+  /** 即時に複数ファイルの変更を1コミットでpushする（移動・削除用）。競合時はnull。 */
+  const commitNow = (message: string, changes: CommitChange[]) =>
+    runExclusive(() => commitNowRaw(message, changes));
+
+  const commitNowRaw = async (message: string, changes: CommitChange[]): Promise<Map<string, string> | null> => {
     const { client, repo } = get();
     if (!client || !repo) return null;
     const ref = repoRef(repo);
@@ -401,7 +422,7 @@ export const useStore = create<DocVaultState>((set, get) => {
       if (get().syncing) return;
       set({ syncing: true });
       try {
-        await doPull();
+        await runExclusive(doPull);
       } finally {
         set({ syncing: false });
       }
@@ -411,7 +432,7 @@ export const useStore = create<DocVaultState>((set, get) => {
       if (get().syncing) return;
       set({ syncing: true });
       try {
-        await doPush();
+        await runExclusive(doPush);
       } catch (e) {
         get().setToast(`同期エラー: ${e instanceof Error ? e.message : e}`);
       } finally {
@@ -423,8 +444,10 @@ export const useStore = create<DocVaultState>((set, get) => {
       if (get().syncing) return;
       set({ syncing: true });
       try {
-        await doPull();
-        await doPush();
+        await runExclusive(async () => {
+          await doPull();
+          await doPush();
+        });
       } catch (e) {
         get().setToast(`同期エラー: ${e instanceof Error ? e.message : e}`);
       } finally {
@@ -521,6 +544,23 @@ export const useStore = create<DocVaultState>((set, get) => {
       return path;
     },
 
+    /**
+     * フォルダ作成。Gitは空ディレクトリを保持できないため .gitkeep ファイルで表現する
+     * （ツリーには空フォルダとして表示され、ドキュメントを置いた後も無害）。
+     */
+    createFolder: (path) => {
+      const dir = normalizePath(path.replace(/^\/+|\/+$/g, ""));
+      if (!dir) return;
+      const files = get().files;
+      const exists = Object.keys(files).some((p) => p === dir || p.startsWith(`${dir}/`));
+      if (exists) {
+        get().setToast("同名のフォルダまたはファイルが既に存在します");
+        return;
+      }
+      get().saveLocal(`${dir}/.gitkeep`, "");
+      get().setToast(`フォルダ「${dir}」を作成しました`);
+    },
+
     deleteDoc: async (path) => {
       const blobShas = await commitNow(`docs: delete ${path}`, [{ path, delete: true }]);
       if (blobShas == null && get().conflict) return;
@@ -545,7 +585,7 @@ export const useStore = create<DocVaultState>((set, get) => {
       }
       // 未pushの編集を先に反映してから移動する（リンク書き換えの基準を一意にする）
       if (state.dirtyCount > 0) {
-        await doPush();
+        await runExclusive(doPush);
         if (get().conflict) return false;
       }
       const files = get().files;

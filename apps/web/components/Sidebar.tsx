@@ -5,6 +5,7 @@ import {
   Database,
   FilePlus2,
   FileText,
+  FolderPlus,
   ImageOff,
   LayoutTemplate,
   LogOut,
@@ -109,13 +110,25 @@ export default function Sidebar() {
         <span className="text-xs font-semibold tracking-wide text-neutral-400 uppercase">
           ドキュメント
         </span>
-        <button
-          onClick={() => openNewDoc("")}
-          title="新規ドキュメント"
-          className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600 dark:hover:bg-neutral-800"
-        >
-          <FilePlus2 className="h-4 w-4" />
-        </button>
+        <div className="flex items-center">
+          <button
+            onClick={() => {
+              const name = window.prompt("作成するフォルダのパス（例: projects/2026）");
+              if (name?.trim()) useStore.getState().createFolder(name.trim());
+            }}
+            title="新規フォルダ"
+            className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600 dark:hover:bg-neutral-800"
+          >
+            <FolderPlus className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => openNewDoc("")}
+            title="新規ドキュメント"
+            className="rounded p-1 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-600 dark:hover:bg-neutral-800"
+          >
+            <FilePlus2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
         <TreeView onNewDoc={openNewDoc} />
