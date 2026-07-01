@@ -112,6 +112,9 @@ export class GitHubClient {
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
+      // GitHub APIは max-age=60 を返すため、ブラウザのHTTPキャッシュに乗ると
+      // 自分のpush直後に古いref/treeが見えて偽の競合検知が起きる。常に素通しする。
+      cache: "no-store",
       ...init,
     });
     if (!res.ok) {
