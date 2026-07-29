@@ -22,8 +22,6 @@ import { useImageUrl } from "@/lib/images";
 import MermaidDiagram from "./MermaidDiagram";
 import EmbedBlock from "./EmbedBlock";
 
-import "highlight.js/styles/github.css";
-
 /**
  * 閲覧モード: GFM準拠の完全描画。
  * Alerts / Mermaid / 埋め込み（![[...]]）はセグメント分割で専用コンポーネントに振り分け、

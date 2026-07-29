@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { fetchImageUrl } from "@/lib/images";
 import { normalizeCrepeMarkdown } from "@/lib/crepeMarkdown";
 import { alertDecorationPlugin, buildAlertMenu } from "@/lib/alerts";
+import { codeMirrorTheme } from "@/lib/codeTheme";
 
 import "@milkdown/crepe/theme/common/style.css";
 
@@ -83,6 +84,10 @@ export default function MilkdownEditor({
             [Crepe.Feature.BlockEdit]: {
               buildMenu: buildAlertMenu,
             },
+            // Crepe既定のOne Dark（暗色前提）を、ライト/ダーク両対応の配色に差し替える
+            [Crepe.Feature.CodeMirror]: {
+              theme: codeMirrorTheme,
+            },
           },
         });
 
@@ -139,7 +144,9 @@ export default function MilkdownEditor({
   return (
     <div
       ref={rootRef}
-      className="min-h-[50vh]"
+      // docvault-editor: Crepeのstyle.cssは動的importで後から読み込まれるため、
+      // 同じ詳細度だと勝てない。1段深いスコープを与えて上書きを効かせる（globals.css参照）
+      className="docvault-editor min-h-[50vh]"
       onPointerDown={() => (interactedRef.current = true)}
       onKeyDown={() => (interactedRef.current = true)}
       onPaste={() => (interactedRef.current = true)}

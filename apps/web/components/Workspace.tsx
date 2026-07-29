@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { PanelLeftOpen } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { loadSidebarCollapsed, saveSidebarCollapsed } from "@/lib/settings";
 import Sidebar from "./Sidebar";
 import DocPage from "./DocPage";
 import DatabaseView from "./DatabaseView";
@@ -19,6 +21,15 @@ export default function Workspace({
   const view = useStore((s) => s.view);
   const currentPath = useStore((s) => s.currentPath);
   const clearRepo = useStore((s) => s.clearRepo);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // localStorageはSSR時に読めないのでマウント後に反映する
+  useEffect(() => setSidebarCollapsed(loadSidebarCollapsed()), []);
+
+  const toggleSidebar = (collapsed: boolean) => {
+    setSidebarCollapsed(collapsed);
+    saveSidebarCollapsed(collapsed);
+  };
 
   useEffect(() => {
     void useStore.getState().loadRepo(initialRequest);
@@ -63,7 +74,19 @@ export default function Workspace({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      {sidebarCollapsed ? (
+        <div className="flex w-10 shrink-0 flex-col items-center border-r border-neutral-200 bg-neutral-50 py-2.5 dark:border-neutral-800 dark:bg-neutral-900">
+          <button
+            onClick={() => toggleSidebar(false)}
+            title="サイドバーを開く"
+            className="rounded p-1.5 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-800"
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <Sidebar onCollapse={() => toggleSidebar(true)} />
+      )}
       <main className="min-w-0 flex-1 overflow-y-auto">
         {view.kind === "database" ? (
           <DatabaseView />

@@ -3,6 +3,7 @@ export * from "./frontmatter";
 export * from "./names";
 export * from "./alerts";
 export * from "./segments";
+export * from "./headings";
 export * from "./ids";
 export * from "./links";
 export * from "./blocks";

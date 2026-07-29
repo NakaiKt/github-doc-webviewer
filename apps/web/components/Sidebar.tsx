@@ -10,6 +10,7 @@ import {
   LayoutTemplate,
   LogOut,
   Moon,
+  PanelLeftClose,
   Plus,
   RefreshCw,
   Repeat,
@@ -24,7 +25,7 @@ import TreeView from "./TreeView";
 import NewDocDialog from "./NewDocDialog";
 import UnusedImagesDialog from "./UnusedImagesDialog";
 
-export default function Sidebar() {
+export default function Sidebar({ onCollapse }: { onCollapse: () => void }) {
   const repo = useStore((s) => s.repo);
   const files = useStore((s) => s.files);
   const syncing = useStore((s) => s.syncing);
@@ -97,6 +98,13 @@ export default function Sidebar() {
           {dirtyCount > 0 && !syncing && (
             <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-amber-500" />
           )}
+        </button>
+        <button
+          onClick={onCollapse}
+          title="サイドバーを閉じる"
+          className="rounded p-1.5 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-800"
+        >
+          <PanelLeftClose className="h-4 w-4" />
         </button>
       </div>
 

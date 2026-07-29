@@ -8,6 +8,7 @@ import { useStore } from "@/lib/store";
 import ReadView from "./ReadView";
 import MoveDialog from "./MoveDialog";
 import PropertiesPanel from "./PropertiesPanel";
+import Toc from "./Toc";
 
 const MilkdownEditor = dynamic(() => import("./MilkdownEditor"), {
   ssr: false,
@@ -123,6 +124,8 @@ export default function DocPage({ path }: { path: string }) {
       ) : (
         <ReadView path={path} body={parsed.body} />
       )}
+
+      <Toc body={parsed.body} mode={mode} />
 
       {moveOpen && <MoveDialog path={path} onClose={() => setMoveOpen(false)} />}
     </div>

@@ -6,11 +6,52 @@
 :root {
   --background: #ffffff;
   --foreground: #1f2328;
+
+  /* コード配色（GitHubのlight系）。閲覧モード(highlight.js)と
+     編集モード(CodeMirror)の両方がこの変数を参照するので、配色は1か所で決まる */
+  --code-bg: #f6f8fa;
+  --code-fg: #1f2328;
+  --code-muted: #59636e;
+  --code-keyword: #cf222e;
+  --code-string: #0a3069;
+  --code-number: #0550ae;
+  --code-name: #6639ba;
+  --code-type: #0550ae;
+  --code-var: #953800;
+  --code-invalid: #82071e;
+  --code-selection: #cfe4fd;
+  --code-active-line: #f0f3f6;
+  --code-gutter: #8c959f;
+  --code-border: #d1d9e0;
+
+  /* 見出し */
+  --heading-accent: #0550ae;
+  --heading-muted: #59636e;
+  --heading-rule: #d1d9e0;
 }
 
 .dark {
   --background: #16181d;
   --foreground: #e6e8eb;
+
+  --code-bg: #1a1e24;
+  --code-fg: #e6edf3;
+  --code-muted: #9198a1;
+  --code-keyword: #ff7b72;
+  --code-string: #a5d6ff;
+  --code-number: #79c0ff;
+  --code-name: #d2a8ff;
+  --code-type: #79c0ff;
+  --code-var: #ffa657;
+  --code-invalid: #ff7b72;
+  --code-selection: #2d4f76;
+  --code-active-line: #21262d;
+  --code-gutter: #6e7681;
+  --code-border: #30363d;
+
+  --heading-accent: #79c0ff;
+  --heading-muted: #9198a1;
+  --heading-rule: #30363d;
 }
 
 html,
@@ -117,12 +158,258 @@ body {
 .dark .md-alert-warning { --alert-color: #d29922; }
 .dark .md-alert-caution { --alert-color: #f85149; }
 
+/* ---- 見出し（閲覧モード / 編集モード共通） ----
+   サイズ差だけだとパッと見て階層が分からないので、レベルごとに
+   「罫線 → 罫線 → 縦バー＋色 → 色 → 弱色 → 弱色＋大文字」と装飾の種類を変える。 */
+/* Crepeは `.milkdown .ProseMirror h1` （詳細度0,2,1）で自前のサイズと font-weight:400 を
+   当ててくるので、エディタ側だけ :where() を使わず同じ詳細度で上書きする。 */
+.readview :where(h1, h2, h3, h4, h5, h6),
+.docvault-editor .milkdown .ProseMirror h1,
+.docvault-editor .milkdown .ProseMirror h2,
+.docvault-editor .milkdown .ProseMirror h3,
+.docvault-editor .milkdown .ProseMirror h4,
+.docvault-editor .milkdown .ProseMirror h5,
+.docvault-editor .milkdown .ProseMirror h6 {
+  font-weight: 700;
+  line-height: 1.35;
+  margin-top: 1.6em;
+  margin-bottom: 0.6em;
+  color: var(--foreground);
+}
+.readview :where(h1),
+.docvault-editor .milkdown .ProseMirror h1 {
+  font-size: 1.9em;
+  padding-bottom: 0.25em;
+  border-bottom: 3px solid var(--heading-rule);
+}
+.readview :where(h2),
+.docvault-editor .milkdown .ProseMirror h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.2em;
+  border-bottom: 1px solid var(--heading-rule);
+}
+.readview :where(h3),
+.docvault-editor .milkdown .ProseMirror h3 {
+  font-size: 1.25em;
+  color: var(--heading-accent);
+  border-left: 4px solid var(--heading-accent);
+  padding-left: 0.5em;
+}
+.readview :where(h4),
+.docvault-editor .milkdown .ProseMirror h4 {
+  font-size: 1.08em;
+  color: var(--heading-accent);
+}
+.readview :where(h5),
+.docvault-editor .milkdown .ProseMirror h5 {
+  font-size: 1em;
+  color: var(--heading-muted);
+}
+.readview :where(h6),
+.docvault-editor .milkdown .ProseMirror h6 {
+  font-size: 0.85em;
+  color: var(--heading-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+/* h5/h6は日本語だとuppercaseが効かず大きさしか差が出ないので、先頭に印を付ける */
+.readview :where(h5)::before,
+.docvault-editor .milkdown .ProseMirror h5::before {
+  content: "▸";
+  margin-right: 0.4em;
+  color: var(--heading-accent);
+}
+.readview :where(h6)::before,
+.docvault-editor .milkdown .ProseMirror h6::before {
+  content: "•";
+  margin-right: 0.4em;
+  color: var(--heading-accent);
+}
+
+/* ---- コードブロック（閲覧モード / highlight.js） ----
+   Tailwind typographyの `pre` は暗い背景前提の薄い文字色を当てるため上書きする。
+   言語指定なし（hljsクラスが付かない）ブロックも必ず読める色にする。 */
+.readview :where(pre) {
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid var(--code-border);
+  padding: 0.9em 1.1em;
+}
+.readview :where(pre) code,
+.readview :where(pre) code.hljs {
+  background: transparent;
+  color: var(--code-fg);
+  padding: 0;
+}
+/* インラインコード（proseのバッククォート装飾は消す） */
+.readview :where(:not(pre) > code) {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid var(--code-border);
+  border-radius: 5px;
+  padding: 0.1em 0.35em;
+  font-weight: 500;
+}
+.readview :where(:not(pre) > code)::before,
+.readview :where(:not(pre) > code)::after {
+  content: none;
+}
+
+.readview .hljs-comment,
+.readview .hljs-quote {
+  color: var(--code-muted);
+  font-style: italic;
+}
+.readview .hljs-keyword,
+.readview .hljs-selector-tag,
+.readview .hljs-literal,
+.readview .hljs-doctag,
+.readview .hljs-subst {
+  color: var(--code-keyword);
+}
+.readview .hljs-string,
+.readview .hljs-regexp,
+.readview .hljs-addition,
+.readview .hljs-meta .hljs-string {
+  color: var(--code-string);
+}
+.readview .hljs-number,
+.readview .hljs-symbol,
+.readview .hljs-bullet,
+.readview .hljs-link {
+  color: var(--code-number);
+}
+.readview .hljs-title,
+.readview .hljs-section,
+.readview .hljs-name {
+  color: var(--code-name);
+}
+.readview .hljs-type,
+.readview .hljs-built_in,
+.readview .hljs-builtin-name,
+.readview .hljs-class .hljs-title {
+  color: var(--code-type);
+}
+.readview .hljs-variable,
+.readview .hljs-template-variable,
+.readview .hljs-attr,
+.readview .hljs-attribute,
+.readview .hljs-selector-attr,
+.readview .hljs-selector-class,
+.readview .hljs-selector-id,
+.readview .hljs-params {
+  color: var(--code-var);
+}
+.readview .hljs-meta,
+.readview .hljs-comment .hljs-doctag {
+  color: var(--code-muted);
+}
+.readview .hljs-deletion {
+  color: var(--code-invalid);
+}
+.readview .hljs-emphasis {
+  font-style: italic;
+}
+.readview .hljs-strong {
+  font-weight: 600;
+}
+
+/* ---- コードブロック（編集モード / CodeMirror） ---- */
+.milkdown .milkdown-code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+}
+.milkdown .milkdown-code-block .cm-editor,
+.milkdown .milkdown-code-block .cm-gutters {
+  background: transparent;
+}
+
 /* 読みやすさ: proseの微調整 */
 .readview {
   max-width: 48rem;
 }
-.readview :where(pre) {
-  border-radius: 8px;
+
+/* ---- 目次（TOC） ----
+   既定は見出しの階層を示すダッシュだけの細いレール。
+   ホバー/フォーカスすると見出しテキストまで開く。 */
+.toc-rail {
+  position: fixed;
+  top: 5.5rem;
+  right: 0.75rem;
+  z-index: 20;
+  max-height: calc(100vh - 8rem);
+  display: flex;
+  justify-content: flex-end;
+}
+.toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  overflow-y: auto;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.toc-rail:hover .toc-list,
+.toc-rail:focus-within .toc-list {
+  background: var(--background);
+  border-color: var(--heading-rule);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+.toc-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--heading-muted);
+}
+.toc-rail:hover .toc-item,
+.toc-rail:focus-within .toc-item {
+  justify-content: flex-start;
+}
+.toc-dash {
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.4;
+  flex: none;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+.toc-item:hover .toc-dash,
+.toc-item[data-active="true"] .toc-dash {
+  opacity: 1;
+  background: var(--heading-accent);
+}
+.toc-label {
+  display: none;
+  max-width: 15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+}
+.toc-rail:hover .toc-label,
+.toc-rail:focus-within .toc-label {
+  display: inline;
+}
+.toc-item[data-active="true"] {
+  color: var(--heading-accent);
+  font-weight: 600;
+}
+.toc-item:hover {
+  color: var(--foreground);
 }
 
 /* mermaid図の中央寄せ */
