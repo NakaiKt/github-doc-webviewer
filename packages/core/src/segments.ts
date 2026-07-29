@@ -2,9 +2,10 @@
  * 閲覧モード描画のための本文分割。
  * - 行単位で走査し、コードフェンス内は素通しする
  * - 単独行の埋め込み `![[target]]` を embed セグメントに
- * - `> [!NOTE]` 等のGitHub Alertsブロックを alert セグメントに
+ * - `> [!NOTE]` 等のGitHub Alertsブロックを alert セグメントに（リスト内のインデントにも対応）
  * - ```mermaid ブロックを mermaid セグメントに
  */
+import { ALERT_QUOTE_MARKER_RE, type AlertKind } from "./alerts";
 
 export type Segment =
   | { type: "md"; text: string }
@@ -12,12 +13,11 @@ export type Segment =
   | { type: "alert"; kind: AlertKind; inner: string }
   | { type: "mermaid"; code: string };
 
-export type AlertKind = "note" | "tip" | "important" | "warning" | "caution";
-
 const EMBED_LINE_RE = /^!\[\[([^\]\n]+)\]\]\s*$/;
-const ALERT_START_RE = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/i;
 const FENCE_RE = /^(\s*)(```+|~~~+)(.*)$/;
 const BLOCK_MARKER_RE = /\s\^[A-Za-z0-9-]+\s*$/;
+const QUOTE_LINE_RE = /^[ \t]*>/;
+const QUOTE_PREFIX_RE = /^[ \t]*>[ \t]?/;
 
 /** 行末のブロックIDマーカー（` ^abc123`）は閲覧時には表示しない（Obsidian互換） */
 function stripBlockMarker(line: string): string {
@@ -65,20 +65,20 @@ export function parseSegments(body: string): Segment[] {
       continue;
     }
 
-    const alert = line.match(ALERT_START_RE);
+    const alert = line.match(ALERT_QUOTE_MARKER_RE);
     if (alert) {
-      // 続くblockquote行を集める
+      // 続く引用行を集める（`>` だけの空行も本文の段落区切りとして保持する）
       let j = i + 1;
       const inner: string[] = [];
-      while (j < lines.length && /^>/.test(lines[j])) {
-        inner.push(stripBlockMarker(lines[j].replace(/^>\s?/, "")));
+      while (j < lines.length && QUOTE_LINE_RE.test(lines[j])) {
+        inner.push(stripBlockMarker(lines[j].replace(QUOTE_PREFIX_RE, "")));
         j++;
       }
       flush();
       segments.push({
         type: "alert",
-        kind: alert[1].toLowerCase() as AlertKind,
-        inner: inner.join("\n"),
+        kind: alert[2].toLowerCase() as AlertKind,
+        inner: inner.join("\n").trim(),
       });
       i = j;
       continue;

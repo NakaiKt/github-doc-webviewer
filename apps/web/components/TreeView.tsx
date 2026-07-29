@@ -1,7 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, FileText, FolderClosed, FolderOpen, FolderPlus, Plus } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  FolderClosed,
+  FolderOpen,
+  FolderPlus,
+  Pencil,
+  Plus,
+} from "lucide-react";
 import { basename, joinPath } from "@docvault/core";
 import { useStore } from "@/lib/store";
 import { buildTree, type TreeFolder } from "@/lib/tree";
@@ -139,23 +148,42 @@ function DocNode({ name, path, depth }: { name: string; path: string; depth: num
   const openDoc = useStore((s) => s.openDoc);
   const active = currentPath === path;
 
+  const rename = () => {
+    const next = window.prompt("新しいドキュメント名（ファイル名）", name);
+    if (next?.trim() && next.trim() !== name) {
+      void useStore.getState().renameDoc(path, next.trim());
+    }
+  };
+
   return (
-    <button
+    <div
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData("application/x-docvault-path", path);
         e.dataTransfer.effectAllowed = "move";
       }}
-      onClick={() => openDoc(path)}
-      className={`flex w-full items-center gap-1.5 rounded px-1 py-1 text-left text-sm ${
+      className={`group flex items-center gap-1 rounded px-1 py-1 text-sm ${
         active
           ? "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-100"
           : "hover:bg-neutral-200 dark:hover:bg-neutral-800"
       }`}
       style={{ paddingLeft: depth * 12 + 22 }}
     >
-      <FileText className="h-4 w-4 shrink-0 text-neutral-400" />
-      <span className="truncate">{name}</span>
-    </button>
+      <button
+        onClick={() => openDoc(path)}
+        onDoubleClick={rename}
+        className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+      >
+        <FileText className="h-4 w-4 shrink-0 text-neutral-400" />
+        <span className="truncate">{name}</span>
+      </button>
+      <button
+        onClick={rename}
+        title="名前を変更（参照リンクは自動更新）"
+        className="hidden rounded p-0.5 text-neutral-400 group-hover:block hover:bg-neutral-300 dark:hover:bg-neutral-700"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
+    </div>
   );
 }

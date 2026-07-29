@@ -7,14 +7,20 @@ import remarkGemoji from "remark-gemoji";
 import rehypeHighlight from "rehype-highlight";
 import rehypeSlug from "rehype-slug";
 import { AlertTriangle, Info, Lightbulb, MessageSquareWarning, OctagonAlert } from "lucide-react";
-import { dirname, isRelativeUrl, resolveRelative, splitAnchor } from "@docvault/core";
+import {
+  ALERT_LABELS,
+  dirname,
+  isRelativeUrl,
+  parseSegments,
+  resolveRelative,
+  splitAnchor,
+  type AlertKind,
+  type Segment,
+} from "@docvault/core";
 import { useStore, resolveDocTarget } from "@/lib/store";
-import { parseSegments, type AlertKind, type Segment } from "@/lib/segments";
 import { useImageUrl } from "@/lib/images";
 import MermaidDiagram from "./MermaidDiagram";
 import EmbedBlock from "./EmbedBlock";
-
-import "highlight.js/styles/github.css";
 
 /**
  * 閲覧モード: GFM準拠の完全描画。
@@ -66,23 +72,23 @@ function SegmentView({
   }
 }
 
-const ALERT_META: Record<AlertKind, { label: string; icon: React.ReactNode }> = {
-  note: { label: "Note", icon: <Info className="h-4 w-4" /> },
-  tip: { label: "Tip", icon: <Lightbulb className="h-4 w-4" /> },
-  important: { label: "Important", icon: <MessageSquareWarning className="h-4 w-4" /> },
-  warning: { label: "Warning", icon: <AlertTriangle className="h-4 w-4" /> },
-  caution: { label: "Caution", icon: <OctagonAlert className="h-4 w-4" /> },
+/** GitHub Alertsのアイコン（ラベルはGitHubの表示に合わせて @docvault/core 側で定義）。 */
+const ALERT_ICONS: Record<AlertKind, React.ReactNode> = {
+  note: <Info className="h-4 w-4" />,
+  tip: <Lightbulb className="h-4 w-4" />,
+  important: <MessageSquareWarning className="h-4 w-4" />,
+  warning: <AlertTriangle className="h-4 w-4" />,
+  caution: <OctagonAlert className="h-4 w-4" />,
 };
 
 function AlertBlock({ kind, inner, path }: { kind: AlertKind; inner: string; path: string }) {
-  const meta = ALERT_META[kind];
   return (
     <div className={`md-alert md-alert-${kind}`}>
       <div className="md-alert-title">
-        {meta.icon}
-        {meta.label}
+        {ALERT_ICONS[kind]}
+        {ALERT_LABELS[kind]}
       </div>
-      <MarkdownBlock text={inner} path={path} />
+      {inner && <MarkdownBlock text={inner} path={path} />}
     </div>
   );
 }

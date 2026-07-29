@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { Crepe } from "@milkdown/crepe";
 import { dirname, relativeTo, resolveRelative, isRelativeUrl, splitAnchor } from "@docvault/core";
 import { useStore } from "@/lib/store";
 import { fetchImageUrl } from "@/lib/images";
 import { normalizeCrepeMarkdown } from "@/lib/crepeMarkdown";
+import { alertDecorationPlugin, buildAlertMenu } from "@/lib/alerts";
+import { codeMirrorTheme } from "@/lib/codeTheme";
 
 import "@milkdown/crepe/theme/common/style.css";
 
@@ -12,8 +15,9 @@ import "@milkdown/crepe/theme/common/style.css";
  * Milkdown Crepe によるWYSIWYG Markdownエディタ。
  * Markdownが実体（remarkベースでパース/シリアライズが対称）なので、
  * 保存されるのは常にプレーンなGFM互換Markdown。
- * Mermaid・Alerts・埋め込み記法は編集時はコードブロック/引用/テキストとして保たれ、
- * 閲覧モードで描画される。
+ * GitHub Alertsは「先頭行が `[!NOTE]` の引用ブロック」として編集中も色付きで表示され、
+ * `/` やブロックハンドルの ＋ から挿入できる。
+ * Mermaid・埋め込み記法は編集時はコードブロック/テキストとして保たれて閲覧モードで描画される。
  */
 export default function MilkdownEditor({
   docPath,
@@ -35,7 +39,7 @@ export default function MilkdownEditor({
 
   useEffect(() => {
     if (fallback) return;
-    let crepe: { destroy: () => Promise<unknown> } | null = null;
+    let crepe: Crepe | null = null;
     let cancelled = false;
 
     (async () => {
@@ -76,8 +80,19 @@ export default function MilkdownEditor({
             [Crepe.Feature.Placeholder]: {
               text: "入力を始めましょう。「/」でブロックを挿入できます",
             },
+            // GitHub Alertsをスラッシュメニュー（`/`・ブロックハンドルの ＋）に追加する
+            [Crepe.Feature.BlockEdit]: {
+              buildMenu: buildAlertMenu,
+            },
+            // Crepe既定のOne Dark（暗色前提）を、ライト/ダーク両対応の配色に差し替える
+            [Crepe.Feature.CodeMirror]: {
+              theme: codeMirrorTheme,
+            },
           },
         });
+
+        // GitHub Alertsの引用ブロックを編集中も色付きで見せる
+        instance.editor.use(alertDecorationPlugin);
 
         instance.on((listener) => {
           listener.markdownUpdated((_ctx, markdown, prev) => {
@@ -129,7 +144,9 @@ export default function MilkdownEditor({
   return (
     <div
       ref={rootRef}
-      className="min-h-[50vh]"
+      // docvault-editor: Crepeのstyle.cssは動的importで後から読み込まれるため、
+      // 同じ詳細度だと勝てない。1段深いスコープを与えて上書きを効かせる（globals.css参照）
+      className="docvault-editor min-h-[50vh]"
       onPointerDown={() => (interactedRef.current = true)}
       onKeyDown={() => (interactedRef.current = true)}
       onPaste={() => (interactedRef.current = true)}

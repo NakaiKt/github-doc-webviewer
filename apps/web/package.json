@@ -9,8 +9,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@codemirror/language": "^6.10.1",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.16.0",
     "@docvault/core": "workspace:*",
+    "@lezer/highlight": "^1.2.0",
     "@milkdown/crepe": "^7.15.5",
+    "@milkdown/kit": "^7.15.5",
     "highlight.js": "^11.11.1",
     "lucide-react": "^0.525.0",
     "mermaid": "^11.12.1",

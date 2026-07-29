@@ -3,6 +3,7 @@
 const KEY_TOKEN = "docvault.pat";
 const KEY_REPO = "docvault.repo";
 const KEY_THEME = "docvault.theme";
+const KEY_SIDEBAR = "docvault.sidebarCollapsed";
 
 export function loadToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -44,4 +45,13 @@ export function loadTheme(): Theme {
 export function applyTheme(theme: Theme) {
   localStorage.setItem(KEY_THEME, theme);
   document.documentElement.classList.toggle("dark", theme === "dark");
+}
+
+export function loadSidebarCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(KEY_SIDEBAR) === "1";
+}
+
+export function saveSidebarCollapsed(collapsed: boolean) {
+  localStorage.setItem(KEY_SIDEBAR, collapsed ? "1" : "0");
 }

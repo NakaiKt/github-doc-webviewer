@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ArrowDownAZ, ArrowUpAZ, Kanban, Table2 } from "lucide-react";
-import { basename, docTitle, parseDoc } from "@docvault/core";
+import { docName, parseDoc } from "@docvault/core";
 import { useStore } from "@/lib/store";
 import { isVisibleDoc, listFolders } from "@/lib/tree";
 
@@ -39,11 +39,8 @@ export default function DatabaseView() {
       )
       .map((f) => {
         const { frontmatter } = parseDoc(f.content!);
-        return {
-          path: f.path,
-          title: docTitle(f.content!, basename(f.path).replace(/\.md$/, "")),
-          props: frontmatter,
-        };
+        // 表示名はファイル名に一本化（frontmatterのtitleは通常のプロパティとして扱う）
+        return { path: f.path, title: docName(f.path), props: frontmatter };
       });
   }, [files, folder]);
 
@@ -52,7 +49,6 @@ export default function DatabaseView() {
     const freq = new Map<string, number>();
     for (const r of rows) {
       for (const k of Object.keys(r.props)) {
-        if (k === "title") continue;
         freq.set(k, (freq.get(k) ?? 0) + 1);
       }
     }
@@ -161,7 +157,7 @@ export default function DatabaseView() {
           <table className="w-full text-sm">
             <thead className="bg-neutral-50 text-left dark:bg-neutral-900">
               <tr>
-                <Th label="タイトル" active={sortKey === "__title"} asc={sortAsc} onClick={() => clickSort("__title")} />
+                <Th label="名前" active={sortKey === "__title"} asc={sortAsc} onClick={() => clickSort("__title")} />
                 {columns.map((c) => (
                   <Th key={c} label={c} active={sortKey === c} asc={sortAsc} onClick={() => clickSort(c)} />
                 ))}

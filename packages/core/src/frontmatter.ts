@@ -45,14 +45,3 @@ export function setFrontmatterKey(content: string, key: string, value: unknown):
   const next = { ...frontmatter, [key]: value };
   return serializeDoc(next, body);
 }
-
-/** ドキュメントのタイトル: frontmatter.title → 最初のH1 → ファイル名、の順で決める。 */
-export function docTitle(content: string, fallback: string): string {
-  const { frontmatter, body } = parseDoc(content);
-  if (typeof frontmatter.title === "string" && frontmatter.title.trim()) {
-    return frontmatter.title.trim();
-  }
-  const h1 = body.match(/^#\s+(.+)$/m);
-  if (h1) return h1[1].trim();
-  return fallback;
-}
