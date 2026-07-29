@@ -10,7 +10,6 @@ import {
   docName,
   renamedPath,
   sanitizeFileName,
-  syncDocName,
   generateDocId,
   updateLinksForMovedDoc,
   updateLinksToMovedFile,
@@ -512,7 +511,7 @@ export const useStore = create<DocVaultState>((set, get) => {
 
     /**
      * 新規ドキュメント作成。ドキュメント名はファイル名がすべてなので、
-     * frontmatterに `title` は書き込まない（同じ名前が2箇所にあるとズレるため）。
+     * frontmatterの `title` も本文先頭のH1も作らない（名前が複数箇所にあるとズレるため）。
      */
     createDoc: async (dir, name, templatePath) => {
       const { files } = get();
@@ -523,7 +522,7 @@ export const useStore = create<DocVaultState>((set, get) => {
         path = normalizePath(dir ? `${dir}/${safe}-${n}.md` : `${safe}-${n}.md`);
         n++;
       }
-      const docTitleText = docName(path);
+      const finalName = docName(path);
       const id = generateDocId();
       let content: string;
       const template = templatePath ? files[templatePath] : null;
@@ -532,7 +531,7 @@ export const useStore = create<DocVaultState>((set, get) => {
         const date = new Date().toISOString().slice(0, 10);
         const fill = (v: unknown): unknown => {
           if (typeof v === "string")
-            return v.replaceAll("{{title}}", docTitleText).replaceAll("{{date}}", date);
+            return v.replaceAll("{{title}}", finalName).replaceAll("{{date}}", date);
           if (Array.isArray(v)) return v.map(fill);
           if (v && typeof v === "object") {
             return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fill(x)]));
@@ -543,7 +542,7 @@ export const useStore = create<DocVaultState>((set, get) => {
         const filledBody = fill(body) as string;
         content = serializeDoc(fm, filledBody);
       } else {
-        content = `---\nid: ${id}\n---\n\n# ${docTitleText}\n\n`;
+        content = `---\nid: ${id}\n---\n\n`;
       }
       get().saveLocal(path, content);
       get().openDoc(path);
@@ -580,7 +579,6 @@ export const useStore = create<DocVaultState>((set, get) => {
     /**
      * ドキュメント移動・リネーム。移動するファイル自身の相対リンク（画像含む）と、
      * このファイルを参照している全ファイルの相対リンクを書き換えて1コミットでpushする。
-     * ファイル名が変わる場合は、旧名と一致していたfrontmatter.title・先頭H1も追従させる。
      */
     moveDoc: async (oldPath, newPath) => {
       newPath = normalizePath(newPath);
@@ -599,11 +597,7 @@ export const useStore = create<DocVaultState>((set, get) => {
       const moved = files[oldPath];
       if (!moved || moved.content == null) return false;
 
-      const movedContent = syncDocName(
-        updateLinksForMovedDoc(moved.content, oldPath, newPath),
-        docName(oldPath),
-        docName(newPath)
-      );
+      const movedContent = updateLinksForMovedDoc(moved.content, oldPath, newPath);
       const changes: CommitChange[] = [
         { path: newPath, content: movedContent },
         { path: oldPath, delete: true },

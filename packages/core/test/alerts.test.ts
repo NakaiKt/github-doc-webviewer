@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alertSnippet, matchAlertMarker, normalizeAlerts } from "../src/alerts";
+import { matchAlertMarker, normalizeAlerts } from "../src/alerts";
 
 describe("alerts", () => {
   it("recognises the five GitHub alert kinds", () => {
@@ -35,9 +35,5 @@ describe("alerts", () => {
 
   it("leaves ordinary blockquotes alone", () => {
     expect(normalizeAlerts("> just a quote\n>\n> second")).toBe("> just a quote\n>\n> second");
-  });
-
-  it("builds a snippet in GitHub's canonical form", () => {
-    expect(alertSnippet("caution", "危険")).toBe("> [!CAUTION]\n> 危険");
   });
 });

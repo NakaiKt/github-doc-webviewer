@@ -62,8 +62,3 @@ export function normalizeAlerts(md: string): string {
 
   return out.join("\n");
 }
-
-/** カーソル位置に挿入するアラートのMarkdown（GitHubの正準形）。 */
-export function alertSnippet(kind: AlertKind, body: string): string {
-  return `> [!${kind.toUpperCase()}]\n> ${body}`;
-}
