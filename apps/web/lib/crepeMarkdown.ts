@@ -1,3 +1,5 @@
+import { normalizeAlerts } from "@docvault/core";
+
 /**
  * Crepe（remark-stringify）はテキスト中の `[` を `\[` にエスケープするため、
  * GitHub Alerts / 埋め込み / 脚注の各記法が保存時に壊れる。
@@ -5,12 +7,8 @@
  * レンダリングされるプレーンMarkdownを維持する。
  */
 export function normalizeCrepeMarkdown(md: string): string {
-  let out = md;
-  // GitHub Alerts: `> \[!NOTE]` → `> [!NOTE]`
-  out = out.replace(
-    /^(\s*>\s*)\\\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\\?\](\s*)$/gim,
-    "$1[!$2]$3"
-  );
+  // GitHub Alerts: `> \[!NOTE]` → `> [!NOTE]`（行末のハードブレーク・空引用行の除去も含む）
+  let out = normalizeAlerts(md);
   // 埋め込みブロック: `!\[\[target]]` → `![[target]]`
   out = out.replace(/!\\?\[\\?\[([^\]\n]+?)\\?\]\\?\]/g, "![[$1]]");
   // 脚注: `\[^1]` → `[^1]`

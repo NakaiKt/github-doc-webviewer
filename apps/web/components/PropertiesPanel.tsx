@@ -73,6 +73,12 @@ export default function PropertiesPanel({ path }: { path: string }) {
           {keys.length === 0 && (
             <p className="pb-1 text-xs text-neutral-400">プロパティはありません</p>
           )}
+          {keys.includes("title") && (
+            <p className="mb-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+              ドキュメント名はファイル名です。ここの <code>title</code> は表示に使われません
+              （名前を変えるには上のタイトル欄を編集してください）。
+            </p>
+          )}
           {keys.map((key) => (
             <div key={key} className="group flex items-center gap-2 py-0.5">
               <span className="w-28 shrink-0 truncate text-sm text-neutral-500">{key}</span>

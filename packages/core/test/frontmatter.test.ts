@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDoc, serializeDoc, setFrontmatterKey, docTitle } from "../src/frontmatter";
+import { parseDoc, serializeDoc, setFrontmatterKey } from "../src/frontmatter";
 
 describe("frontmatter", () => {
   it("parses yaml frontmatter and body", () => {
@@ -30,11 +30,5 @@ describe("frontmatter", () => {
 
   it("serializes empty frontmatter as body only", () => {
     expect(serializeDoc({}, "b\n")).toBe("b\n");
-  });
-
-  it("derives title from frontmatter, h1, then fallback", () => {
-    expect(docTitle("---\ntitle: T\n---\n# H\n", "f")).toBe("T");
-    expect(docTitle("# H\nbody", "f")).toBe("H");
-    expect(docTitle("body", "f")).toBe("f");
   });
 });

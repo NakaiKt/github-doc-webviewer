@@ -93,6 +93,19 @@ body {
   color: var(--alert-color);
   margin-bottom: 0.25rem;
 }
+/* 編集モード（ProseMirror）でのAlerts。Decorationでクラスが付いた引用ブロックを色付けする。
+   マーカー行（`[!NOTE]`）はMarkdownの実体なので消さず、見出しとして目立たせるだけにする。 */
+.milkdown .ProseMirror blockquote.md-alert-edit {
+  border-left: 4px solid var(--alert-color);
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--alert-color) 6%, transparent);
+  padding: 0.25rem 1rem;
+}
+.milkdown .ProseMirror .md-alert-edit-marker {
+  color: var(--alert-color);
+  font-weight: 600;
+}
+
 .md-alert-note { --alert-color: #0969da; }
 .md-alert-tip { --alert-color: #1a7f37; }
 .md-alert-important { --alert-color: #8250df; }

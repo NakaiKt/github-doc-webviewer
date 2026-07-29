@@ -7,7 +7,10 @@ import {
   parseDoc,
   serializeDoc,
   setFrontmatterKey,
-  docTitle,
+  docName,
+  renamedPath,
+  sanitizeFileName,
+  syncDocName,
   generateDocId,
   updateLinksForMovedDoc,
   updateLinksToMovedFile,
@@ -74,10 +77,11 @@ interface DocVaultState {
   openDoc: (path: string | null) => void;
   openDatabase: () => void;
   ensureDocId: (path: string) => string | null;
-  createDoc: (dir: string, title: string, templatePath?: string | null) => Promise<string | null>;
+  createDoc: (dir: string, name: string, templatePath?: string | null) => Promise<string | null>;
   createFolder: (path: string) => void;
   deleteDoc: (path: string) => Promise<void>;
   moveDoc: (oldPath: string, newPath: string) => Promise<boolean>;
+  renameDoc: (path: string, newName: string) => Promise<boolean>;
   uploadAsset: (fileName: string, base64: string) => string;
   deleteFiles: (paths: string[]) => Promise<void>;
   writeBackBlock: (sourcePath: string, newContent: string) => void;
@@ -124,11 +128,8 @@ function refreshSearch(files: Record<string, FileEntry>) {
     .filter((f) => f.isMarkdown && f.content != null && isVisibleDoc(f.path))
     .map((f) => {
       const { body } = parseDoc(f.content!);
-      return {
-        path: f.path,
-        title: docTitle(f.content!, basename(f.path).replace(/\.md$/, "")),
-        text: body,
-      };
+      // 表示名はファイル名に一本化している（frontmatterのtitleは名前として使わない）
+      return { path: f.path, title: docName(f.path), text: body };
     });
   rebuildSearchIndex(docs);
 }
@@ -509,35 +510,40 @@ export const useStore = create<DocVaultState>((set, get) => {
       return id;
     },
 
-    createDoc: async (dir, title, templatePath) => {
+    /**
+     * 新規ドキュメント作成。ドキュメント名はファイル名がすべてなので、
+     * frontmatterに `title` は書き込まない（同じ名前が2箇所にあるとズレるため）。
+     */
+    createDoc: async (dir, name, templatePath) => {
       const { files } = get();
-      const safe = title.trim().replace(/[\\/#?%*:|"<>]/g, "-") || "無題";
+      const safe = sanitizeFileName(name) || "無題";
       let path = normalizePath(dir ? `${dir}/${safe}.md` : `${safe}.md`);
       let n = 2;
       while (files[path]) {
         path = normalizePath(dir ? `${dir}/${safe}-${n}.md` : `${safe}-${n}.md`);
         n++;
       }
+      const docTitleText = docName(path);
       const id = generateDocId();
       let content: string;
       const template = templatePath ? files[templatePath] : null;
       if (template?.content) {
         const { frontmatter, body } = parseDoc(template.content);
         const date = new Date().toISOString().slice(0, 10);
-        const name = title.trim() || safe;
         const fill = (v: unknown): unknown => {
-          if (typeof v === "string") return v.replaceAll("{{title}}", name).replaceAll("{{date}}", date);
+          if (typeof v === "string")
+            return v.replaceAll("{{title}}", docTitleText).replaceAll("{{date}}", date);
           if (Array.isArray(v)) return v.map(fill);
           if (v && typeof v === "object") {
             return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fill(x)]));
           }
           return v;
         };
-        const fm = { ...(fill(frontmatter) as Record<string, unknown>), id, title: name };
+        const fm = { ...(fill(frontmatter) as Record<string, unknown>), id };
         const filledBody = fill(body) as string;
         content = serializeDoc(fm, filledBody);
       } else {
-        content = `---\nid: ${id}\ntitle: ${JSON.stringify(title.trim() || safe)}\n---\n\n# ${title.trim() || safe}\n\n`;
+        content = `---\nid: ${id}\n---\n\n# ${docTitleText}\n\n`;
       }
       get().saveLocal(path, content);
       get().openDoc(path);
@@ -572,15 +578,16 @@ export const useStore = create<DocVaultState>((set, get) => {
     },
 
     /**
-     * ドキュメント移動。移動するファイル自身の相対リンク（画像含む）と、
+     * ドキュメント移動・リネーム。移動するファイル自身の相対リンク（画像含む）と、
      * このファイルを参照している全ファイルの相対リンクを書き換えて1コミットでpushする。
+     * ファイル名が変わる場合は、旧名と一致していたfrontmatter.title・先頭H1も追従させる。
      */
     moveDoc: async (oldPath, newPath) => {
       newPath = normalizePath(newPath);
       if (!newPath || newPath === oldPath) return false;
       const state = get();
       if (state.files[newPath]) {
-        state.setToast("移動先に同名ファイルが存在します");
+        state.setToast(`同名のファイルが既に存在します: ${newPath}`);
         return false;
       }
       // 未pushの編集を先に反映してから移動する（リンク書き換えの基準を一意にする）
@@ -592,7 +599,11 @@ export const useStore = create<DocVaultState>((set, get) => {
       const moved = files[oldPath];
       if (!moved || moved.content == null) return false;
 
-      const movedContent = updateLinksForMovedDoc(moved.content, oldPath, newPath);
+      const movedContent = syncDocName(
+        updateLinksForMovedDoc(moved.content, oldPath, newPath),
+        docName(oldPath),
+        docName(newPath)
+      );
       const changes: CommitChange[] = [
         { path: newPath, content: movedContent },
         { path: oldPath, delete: true },
@@ -606,7 +617,13 @@ export const useStore = create<DocVaultState>((set, get) => {
           rewritten.push({ path: f.path, content: updated });
         }
       }
-      const blobShas = await commitNow(`docs: move ${oldPath} -> ${newPath}`, changes);
+      const renameOnly = dirname(oldPath) === dirname(newPath);
+      const blobShas = await commitNow(
+        renameOnly
+          ? `docs: rename ${docName(oldPath)} -> ${docName(newPath)}`
+          : `docs: move ${oldPath} -> ${newPath}`,
+        changes
+      );
       if (blobShas == null) return false;
 
       const next = { ...get().files };
@@ -633,12 +650,29 @@ export const useStore = create<DocVaultState>((set, get) => {
       }
       setFiles(next);
       if (get().currentPath === oldPath) get().openDoc(newPath);
+      const done = renameOnly ? "名前を変更しました" : "移動しました";
       get().setToast(
         rewritten.length > 0
-          ? `移動しました（${rewritten.length}ファイルのリンクを自動更新）`
-          : "移動しました"
+          ? `${done}（${rewritten.length}ファイルのリンクを自動更新）`
+          : done
       );
       return true;
+    },
+
+    /**
+     * ドキュメント名（= ファイル名）の変更。
+     * 同じフォルダ・同じ拡張子のまま moveDoc に委譲するので、
+     * 参照している全ドキュメントの相対リンクも自動で書き換わる。
+     */
+    renameDoc: async (path, newName) => {
+      const safe = sanitizeFileName(newName);
+      if (!safe) {
+        get().setToast("ドキュメント名を入力してください");
+        return false;
+      }
+      const newPath = renamedPath(path, safe);
+      if (newPath === path) return true;
+      return get().moveDoc(path, newPath);
     },
 
     /** 画像等のバイナリをassets/に追加する（次回push時にコミットされる）。 */

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { BookOpen, Link2, MoveRight, Pencil, Trash2 } from "lucide-react";
-import { basename, parseDoc, serializeDoc } from "@docvault/core";
+import { basename, docName, parseDoc, serializeDoc } from "@docvault/core";
 import { useStore } from "@/lib/store";
 import ReadView from "./ReadView";
 import MoveDialog from "./MoveDialog";
@@ -106,6 +106,9 @@ export default function DocPage({ path }: { path: string }) {
         </button>
       </div>
 
+      {/* ドキュメント名（= ファイル名）。ここを編集するとリネームされる */}
+      <DocNameField path={path} />
+
       {/* frontmatterプロパティ */}
       <PropertiesPanel path={path} />
 
@@ -123,5 +126,56 @@ export default function DocPage({ path }: { path: string }) {
 
       {moveOpen && <MoveDialog path={path} onClose={() => setMoveOpen(false)} />}
     </div>
+  );
+}
+
+/**
+ * ドキュメント名の編集欄。ドキュメント名はファイル名そのものなので、
+ * ここを確定するとファイルがリネームされ、参照リンクも自動で書き換わる。
+ */
+function DocNameField({ path }: { path: string }) {
+  const name = docName(path);
+  const [value, setValue] = useState(name);
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // 別ドキュメントを開いた / 他の経路でリネームされたときに追従する
+  useEffect(() => {
+    setValue(name);
+  }, [name]);
+
+  const commit = async () => {
+    const next = value.trim();
+    if (busy || next === name) return;
+    if (!next) {
+      setValue(name);
+      return;
+    }
+    setBusy(true);
+    const ok = await useStore.getState().renameDoc(path, next);
+    setBusy(false);
+    if (!ok) setValue(name);
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      value={value}
+      disabled={busy}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => void commit()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          inputRef.current?.blur();
+        } else if (e.key === "Escape") {
+          setValue(name);
+          inputRef.current?.blur();
+        }
+      }}
+      title="ドキュメント名（ファイル名）。変更するとファイルがリネームされ、参照リンクも自動更新されます"
+      placeholder="ドキュメント名"
+      className="mb-3 w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-3xl font-bold outline-none hover:border-neutral-200 focus:border-blue-500 disabled:opacity-50 dark:hover:border-neutral-700"
+    />
   );
 }
