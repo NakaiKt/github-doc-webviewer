@@ -8,7 +8,7 @@ export interface TreeFolder {
 }
 
 export const TEMPLATES_DIR = "_templates";
-export const ASSETS_DIR = "assets";
+export const ASSETS_DIR = "_assets";
 
 export function isDocPath(path: string): boolean {
   return path.endsWith(".md") || path.endsWith(".markdown");

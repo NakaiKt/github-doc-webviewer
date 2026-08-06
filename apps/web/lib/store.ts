@@ -21,7 +21,7 @@ import {
   findUnusedImages,
 } from "@docvault/core";
 import { rebuildSearchIndex } from "./search";
-import { isDocPath, isVisibleDoc, TEMPLATES_DIR } from "./tree";
+import { ASSETS_DIR, isDocPath, isVisibleDoc, TEMPLATES_DIR } from "./tree";
 import { saveRepoSelection, saveToken } from "./settings";
 
 export interface FileEntry {
@@ -669,15 +669,15 @@ export const useStore = create<DocVaultState>((set, get) => {
       return get().moveDoc(path, newPath);
     },
 
-    /** 画像等のバイナリをassets/に追加する（次回push時にコミットされる）。 */
+    /** 画像等のバイナリを_assets/に追加する（次回push時にコミットされる）。 */
     uploadAsset: (fileName, base64) => {
       const safe = fileName.replace(/[^\w.\-()（）　-鿿]/g, "_");
       const stamp = Date.now().toString(36);
-      let path = `assets/${stamp}-${safe}`;
+      let path = `${ASSETS_DIR}/${stamp}-${safe}`;
       const files = { ...get().files };
       let n = 2;
       while (files[path]) {
-        path = `assets/${stamp}-${n}-${safe}`;
+        path = `${ASSETS_DIR}/${stamp}-${n}-${safe}`;
         n++;
       }
       files[path] = {
