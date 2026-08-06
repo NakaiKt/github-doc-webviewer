@@ -9,19 +9,18 @@ import { parseHeadings } from "@docvault/core";
  *
  * 見出しの並びは本文Markdownから取り、スクロール先は
  * 「描画されたトップレベル見出し要素のN番目」で解決する。
- * こうすると閲覧モード（react-markdown + rehype-slug）と
- * 編集モード（ProseMirror、id属性なし）の両方を同じロジックで扱える。
+ * ProseMirrorの見出しにはid属性が付かないので、slug生成の一致に頼らずに済む。
  * `parseHeadings` 側もトップレベルの見出しだけを返すので順番が一致する。
  */
 const HEADING_SELECTOR = ":scope > :is(h1,h2,h3,h4,h5,h6)";
 
-function headingElements(mode: "edit" | "read"): HTMLElement[] {
-  const root = document.querySelector(mode === "read" ? ".readview" : ".milkdown .ProseMirror");
+function headingElements(): HTMLElement[] {
+  const root = document.querySelector(".milkdown .ProseMirror");
   if (!root) return [];
   return Array.from(root.querySelectorAll<HTMLElement>(HEADING_SELECTOR));
 }
 
-export default function Toc({ body, mode }: { body: string; mode: "edit" | "read" }) {
+export default function Toc({ body }: { body: string }) {
   const headings = useMemo(() => parseHeadings(body), [body]);
   const [active, setActive] = useState(0);
   const railRef = useRef<HTMLElement>(null);
@@ -39,7 +38,7 @@ export default function Toc({ body, mode }: { body: string; mode: "edit" | "read
     const update = () => {
       frame = 0;
       if (pinnedRef.current != null) return;
-      const els = headingElements(mode);
+      const els = headingElements();
       if (els.length === 0) return;
       const box = scroller.getBoundingClientRect();
       const line = box.top + 96;
@@ -68,7 +67,7 @@ export default function Toc({ body, mode }: { body: string; mode: "edit" | "read
       scroller.removeEventListener("scroll", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [headings, mode]);
+  }, [headings]);
 
   useEffect(
     () => () => {
@@ -80,7 +79,7 @@ export default function Toc({ body, mode }: { body: string; mode: "edit" | "read
   if (headings.length === 0) return null;
 
   const jump = (index: number) => {
-    const el = headingElements(mode)[index];
+    const el = headingElements()[index];
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
     setActive(index);

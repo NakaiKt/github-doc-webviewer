@@ -326,9 +326,118 @@ body {
   background: transparent;
 }
 
+/* コードブロックのコピーボタン（閲覧描画側。埋め込みブロックの中で使われる） */
+.dv-pre {
+  position: relative;
+}
+.dv-pre-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--code-border);
+  border-radius: 999px;
+  background: var(--background);
+  color: var(--code-muted);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.dv-pre:hover .dv-pre-copy,
+.dv-pre-copy:focus-visible,
+.dv-pre-copy[data-copied="true"] {
+  opacity: 1;
+}
+.dv-pre-copy[data-copied="true"] {
+  color: #1a7f37;
+  border-color: #1a7f37;
+}
+.dark .dv-pre-copy[data-copied="true"] {
+  color: #3fb950;
+  border-color: #3fb950;
+}
+
 /* 読みやすさ: proseの微調整 */
 .readview {
   max-width: 48rem;
+}
+
+/* ---- 表示設定（@/lib/display がhtml要素にクラスを付ける） ---- */
+
+/* コードの折り返し。編集側のCodeMirrorは実測が必要なので拡張(lineWrapping)で行う */
+.dv-code-wrap .readview :where(pre) {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.dv-code-wrap .readview :where(pre) code {
+  white-space: inherit;
+}
+
+/* 本文を画面幅いっぱいに。ドキュメント本体と、その中の閲覧描画の両方の上限を外す */
+.dv-full-width .dv-doc {
+  max-width: none;
+}
+.dv-full-width .readview {
+  max-width: none;
+}
+
+/* ---- ライブエディタ: Mermaid ----
+   既定は図だけを見せ、カーソルが入ったブロックだけソース（CodeMirror）に戻す。
+   Crepe側が `.hidden { display: none !important }` を当てているので !important で上書きする。 */
+.docvault-editor .milkdown .milkdown-code-block.dv-mermaid .preview-panel {
+  cursor: text;
+}
+.docvault-editor .milkdown .milkdown-code-block.dv-mermaid.dv-editing .codemirror-host.hidden {
+  display: block !important;
+}
+.docvault-editor .milkdown .milkdown-code-block.dv-mermaid.dv-editing .preview-panel {
+  display: none;
+}
+.docvault-editor .milkdown .milkdown-code-block .preview-panel .preview svg {
+  max-width: 100%;
+  height: auto;
+}
+.dv-mermaid-error {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  color: var(--code-invalid);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+}
+
+/* ---- ライブエディタ: 埋め込みブロック ----
+   カーソルが入っていない間は記法の段落を隠し、代わりにウィジェットで実体を見せる。 */
+.docvault-editor .milkdown .ProseMirror p.dv-embed-source {
+  display: none;
+}
+.dv-embed-live {
+  position: relative;
+}
+.dv-embed-source-button {
+  position: absolute;
+  top: 1.2rem;
+  right: 5rem;
+  z-index: 1;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--code-muted);
+  border: 1px solid var(--code-border);
+  font-size: 0.625rem;
+  line-height: 1.5;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.dv-embed-live:hover .dv-embed-source-button,
+.dv-embed-source-button:focus-visible {
+  opacity: 1;
 }
 
 /* ---- 目次（TOC） ----

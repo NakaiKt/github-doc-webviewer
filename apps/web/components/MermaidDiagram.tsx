@@ -1,32 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-let seq = 0;
+import { useEffect, useState } from "react";
+import { renderMermaid } from "@/lib/mermaid";
 
 /** ```mermaid コードブロックの描画（GitHub上でも同じソースが図として描画される）。 */
 export default function MermaidDiagram({ code }: { code: string }) {
   const [svg, setSvg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const idRef = useRef(`mermaid-${++seq}`);
 
   useEffect(() => {
     let alive = true;
-    (async () => {
-      try {
-        const mermaid = (await import("mermaid")).default;
-        const dark = document.documentElement.classList.contains("dark");
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: dark ? "dark" : "default",
-          securityLevel: "strict",
-        });
-        const { svg } = await mermaid.render(idRef.current, code);
-        if (alive) setSvg(svg);
-      } catch (e) {
+    renderMermaid(code).then(
+      (rendered) => {
+        if (alive) setSvg(rendered);
+      },
+      (e: unknown) => {
         if (alive) setError(e instanceof Error ? e.message : String(e));
       }
-    })();
+    );
     return () => {
       alive = false;
     };
