@@ -1,19 +1,22 @@
 "use client";
 
 /**
- * 編集モード（Milkdown Crepe）でのGitHub Alerts対応。
+ * ライブエディタ（Milkdown Crepe）でのGitHub Alerts対応。
  *
  * Alertsの実体は「先頭行が `[!NOTE]` の引用ブロック」というプレーンなMarkdownなので、
  * 独自ノードは追加せず、
  * - 挿入は Crepe のスラッシュメニュー（`/` ・ブロックハンドルの ＋）にグループを足す
  * - 見た目は ProseMirror の Decoration で与える
  * という2点だけで対応する。保存されるMarkdownは今まで通りGitHubがそのまま描画できる形になる。
+ *
+ * 見え方はMermaid・埋め込みと同じ考え方で、カーソルが入っていない間は
+ * GitHubと同じ「アイコン＋ラベル」に見せ、カーソルが入ったらマーカー（`[!NOTE]`）の実体を出す。
  */
 import { commandsCtx, editorViewCtx } from "@milkdown/kit/core";
 import type { Ctx } from "@milkdown/kit/ctx";
 import { clearTextInCurrentBlockCommand } from "@milkdown/kit/preset/commonmark";
 import type { Node as ProseNode } from "@milkdown/kit/prose/model";
-import { Plugin, PluginKey, TextSelection } from "@milkdown/kit/prose/state";
+import { Plugin, PluginKey, TextSelection, type EditorState } from "@milkdown/kit/prose/state";
 import { Decoration, DecorationSet } from "@milkdown/kit/prose/view";
 import { $prose } from "@milkdown/kit/utils";
 import { ALERT_KINDS, ALERT_LABELS, matchAlertMarker, type AlertKind } from "@docvault/core";
@@ -35,7 +38,8 @@ function firstLineText(paragraph: ProseNode): string {
   return text;
 }
 
-function buildDecorations(doc: ProseNode): DecorationSet {
+function buildDecorations(state: EditorState): DecorationSet {
+  const { doc, selection } = state;
   const decorations: Decoration[] = [];
   doc.descendants((node, pos) => {
     if (node.type.name !== "blockquote") return;
@@ -44,17 +48,32 @@ function buildDecorations(doc: ProseNode): DecorationSet {
     const line = firstLineText(paragraph);
     const kind = matchAlertMarker(line);
     if (!kind) return;
+    const end = pos + node.nodeSize;
+    // カーソル（選択範囲）が掛かっているブロックだけマーカーの実体を見せる
+    const editing = selection.from < end && selection.to > pos;
     // blockquote(pos) > paragraph(pos+1) > インライン内容(pos+2)
-    const markerFrom = pos + 2 + line.indexOf("[");
+    const contentFrom = pos + 2;
+    const markerFrom = contentFrom + line.indexOf("[");
     const markerTo = markerFrom + kind.length + 3; // `[!` + kind + `]`
     decorations.push(
-      Decoration.node(pos, pos + node.nodeSize, {
-        class: `md-alert-edit md-alert-${kind}`,
+      Decoration.node(pos, end, {
+        class: `md-alert-edit md-alert-${kind}${editing ? " dv-editing" : ""}`,
         "data-alert-label": ALERT_LABELS[kind],
       }),
-      // マーカー自体はMarkdownの実体なので消さず、見出しとして目立たせるだけにする
-      Decoration.inline(markerFrom, markerTo, { class: "md-alert-edit-marker" })
+      // マーカーはMarkdownの実体なので消さない。非編集時はCSSで
+      // GitHubと同じ「アイコン＋ラベル」に見せ替えるだけにする
+      Decoration.inline(markerFrom, markerTo, {
+        class: "md-alert-edit-marker",
+        "data-alert-label": ALERT_LABELS[kind],
+      })
     );
+    // マーカー直後の改行。非編集時はラベルが1行を占有するので隠す
+    const after = paragraph.childAfter(markerTo - contentFrom).node;
+    if (after && !after.isText) {
+      decorations.push(
+        Decoration.inline(markerTo, markerTo + after.nodeSize, { class: "md-alert-edit-break" })
+      );
+    }
   });
   return DecorationSet.create(doc, decorations);
 }
@@ -65,8 +84,9 @@ export const alertDecorationPlugin = $prose(
     new Plugin({
       key: alertDecorationKey,
       state: {
-        init: (_config, state) => buildDecorations(state.doc),
-        apply: (tr, prev) => (tr.docChanged ? buildDecorations(tr.doc) : prev),
+        init: (_config, state) => buildDecorations(state),
+        apply: (tr, prev, _old, next) =>
+          tr.docChanged || tr.selectionSet ? buildDecorations(next) : prev,
       },
       props: {
         decorations: (state) => alertDecorationKey.getState(state) as DecorationSet | undefined,

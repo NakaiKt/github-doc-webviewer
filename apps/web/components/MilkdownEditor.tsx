@@ -2,30 +2,37 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Crepe } from "@milkdown/crepe";
+import { EditorView as CodeMirrorView } from "@codemirror/view";
 import { dirname, relativeTo, resolveRelative, isRelativeUrl, splitAnchor } from "@docvault/core";
 import { useStore } from "@/lib/store";
 import { fetchImageUrl } from "@/lib/images";
 import { normalizeCrepeMarkdown } from "@/lib/crepeMarkdown";
 import { alertDecorationPlugin, buildAlertMenu } from "@/lib/alerts";
 import { codeMirrorTheme } from "@/lib/codeTheme";
+import { embedLivePlugin, mermaidLivePlugin, relativeLinkPlugin } from "@/lib/liveEditor";
+import { renderMermaid } from "@/lib/mermaid";
 
 import "@milkdown/crepe/theme/common/style.css";
 
 /**
- * Milkdown Crepe によるWYSIWYG Markdownエディタ。
+ * Milkdown Crepe によるWYSIWYG Markdownエディタ。閲覧モードは持たず、これ1つで完結する
+ * （NotionやObsidianのLive Preview相当）。
  * Markdownが実体（remarkベースでパース/シリアライズが対称）なので、
  * 保存されるのは常にプレーンなGFM互換Markdown。
  * GitHub Alertsは「先頭行が `[!NOTE]` の引用ブロック」として編集中も色付きで表示され、
  * `/` やブロックハンドルの ＋ から挿入できる。
- * Mermaid・埋め込み記法は編集時はコードブロック/テキストとして保たれて閲覧モードで描画される。
+ * Mermaidと埋め込み記法はカーソルが入っていない間だけ描画結果に差し替わる（@/lib/liveEditor）。
  */
 export default function MilkdownEditor({
   docPath,
   initialValue,
+  codeWrap,
   onChange,
 }: {
   docPath: string;
   initialValue: string;
+  /** コードブロックを折り返す（表示設定）。切り替え時はDocPage側でエディタを作り直す */
+  codeWrap: boolean;
   onChange: (markdown: string) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -84,15 +91,40 @@ export default function MilkdownEditor({
             [Crepe.Feature.BlockEdit]: {
               buildMenu: buildAlertMenu,
             },
-            // Crepe既定のOne Dark（暗色前提）を、ライト/ダーク両対応の配色に差し替える
             [Crepe.Feature.CodeMirror]: {
+              // Crepe既定のOne Dark（暗色前提）を、ライト/ダーク両対応の配色に差し替える
               theme: codeMirrorTheme,
+              // 折り返し表示（表示設定）。CodeMirror側の実測に関わるのでCSSではなく拡張で行う
+              extensions: codeWrap ? [CodeMirrorView.lineWrapping] : [],
+              copyText: "コピー",
+              previewLabel: "プレビュー",
+              previewLoading: "図を描画中…",
+              // mermaid以外は renderPreview が null を返すのでプレビューは付かず、
+              // このフラグの影響も受けない（通常のコードブロックのまま）
+              previewOnlyByDefault: true,
+              renderPreview: (language, content, applyPreview) => {
+                if (language?.trim().toLowerCase() !== "mermaid") return null;
+                if (!content.trim()) return null;
+                renderMermaid(content).then(applyPreview, (e: unknown) => {
+                  const message = e instanceof Error ? e.message : String(e);
+                  const box = document.createElement("pre");
+                  box.className = "dv-mermaid-error";
+                  box.textContent = `Mermaid構文エラー: ${message}`;
+                  applyPreview(box);
+                });
+                // 非同期描画。undefinedを返すと描画完了までLoading表示になる
+                return undefined;
+              },
             },
           },
         });
 
         // GitHub Alertsの引用ブロックを編集中も色付きで見せる
         instance.editor.use(alertDecorationPlugin);
+        // Mermaid・埋め込みのライブ描画と、相対リンクでのアプリ内移動
+        instance.editor.use(mermaidLivePlugin);
+        instance.editor.use(embedLivePlugin);
+        instance.editor.use(relativeLinkPlugin);
 
         instance.on((listener) => {
           listener.markdownUpdated((_ctx, markdown, prev) => {
@@ -125,6 +157,38 @@ export default function MilkdownEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fallback]);
 
+  // コピーのフィードバックはボタン自身で返す（「コピー」→「✓」）。
+  // ボタンを描画しているのはCrepe内部のVueコンポーネントなので、
+  // Reactの状態ではなくクラスの付け外しで一時的に見た目を変える。
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let marked: HTMLElement | null = null;
+    const reset = () => {
+      marked?.classList.remove("dv-copied");
+      marked = null;
+      timer = null;
+    };
+    const onClick = (event: MouseEvent) => {
+      const button = (event.target as HTMLElement | null)?.closest?.(
+        ".milkdown-code-block .copy-button"
+      );
+      if (!(button instanceof HTMLElement)) return;
+      if (timer) clearTimeout(timer);
+      marked?.classList.remove("dv-copied");
+      button.classList.add("dv-copied");
+      marked = button;
+      timer = setTimeout(reset, 1500);
+    };
+    root.addEventListener("click", onClick);
+    return () => {
+      root.removeEventListener("click", onClick);
+      if (timer) clearTimeout(timer);
+      reset();
+    };
+  }, []);
+
   if (fallback) {
     return (
       <div>
@@ -135,6 +199,7 @@ export default function MilkdownEditor({
         <textarea
           defaultValue={initialValue}
           onChange={(e) => onChangeRef.current(e.target.value)}
+          wrap={codeWrap ? "soft" : "off"}
           className="h-[70vh] w-full rounded-lg border border-neutral-200 p-4 font-mono text-sm outline-none focus:border-blue-500 dark:border-neutral-700 dark:bg-neutral-900"
         />
       </div>

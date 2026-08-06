@@ -1,12 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkGemoji from "remark-gemoji";
 import rehypeHighlight from "rehype-highlight";
 import rehypeSlug from "rehype-slug";
-import { AlertTriangle, Info, Lightbulb, MessageSquareWarning, OctagonAlert } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Copy,
+  Info,
+  Lightbulb,
+  MessageSquareWarning,
+  OctagonAlert,
+} from "lucide-react";
 import {
   ALERT_LABELS,
   dirname,
@@ -23,9 +31,12 @@ import MermaidDiagram from "./MermaidDiagram";
 import EmbedBlock from "./EmbedBlock";
 
 /**
- * 閲覧モード: GFM準拠の完全描画。
+ * Markdown本文の閲覧描画。GFM準拠の完全描画で、
  * Alerts / Mermaid / 埋め込み（![[...]]）はセグメント分割で専用コンポーネントに振り分け、
  * それ以外は react-markdown（GFM + 絵文字 + 脚注 + シンタックスハイライト）で描画する。
+ *
+ * 本文の編集はライブエディタ（MilkdownEditor）が担うので、ここが使われるのは
+ * 埋め込みブロックが参照先の内容を見せるとき。
  */
 export default function ReadView({
   path,
@@ -113,6 +124,56 @@ function RepoImage({ src, alt, fromPath }: { src?: string; alt?: string; fromPat
   return <img src={url} alt={alt ?? ""} />;
 }
 
+/**
+ * コードブロック。コピーボタンを重ね、押したら一時的に「コピー」→「✓」に変えて
+ * ボタン自身でフィードバックを返す（エディタ側のコピーボタンも同じ挙動）。
+ */
+function CodeBlock({ children }: { children?: React.ReactNode }) {
+  const preRef = useRef<HTMLPreElement>(null);
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(preRef.current?.textContent ?? "");
+    } catch {
+      useStore.getState().setToast("コードをコピーできませんでした");
+      return;
+    }
+    setCopied(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="dv-pre">
+      <button
+        type="button"
+        onClick={() => void copy()}
+        title="コードをコピー"
+        className="dv-pre-copy"
+        data-copied={copied}
+      >
+        {copied ? (
+          <Check className="h-3.5 w-3.5" />
+        ) : (
+          <>
+            <Copy className="h-3.5 w-3.5" /> コピー
+          </>
+        )}
+      </button>
+      <pre ref={preRef}>{children}</pre>
+    </div>
+  );
+}
+
 export function MarkdownBlock({ text, path }: { text: string; path: string }) {
   const openDoc = useStore((s) => s.openDoc);
 
@@ -169,6 +230,7 @@ export function MarkdownBlock({ text, path }: { text: string; path: string }) {
           );
         },
         img: (props) => <RepoImage src={props.src as string} alt={props.alt} fromPath={path} />,
+        pre: (props) => <CodeBlock>{props.children}</CodeBlock>,
       }}
     >
       {text}

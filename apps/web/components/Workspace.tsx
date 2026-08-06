@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PanelLeftOpen } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { loadSidebarCollapsed, saveSidebarCollapsed } from "@/lib/settings";
+import { useDisplay } from "@/lib/display";
 import Sidebar from "./Sidebar";
 import DocPage from "./DocPage";
 import DatabaseView from "./DatabaseView";
@@ -24,7 +25,10 @@ export default function Workspace({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // localStorageはSSR時に読めないのでマウント後に反映する
-  useEffect(() => setSidebarCollapsed(loadSidebarCollapsed()), []);
+  useEffect(() => {
+    setSidebarCollapsed(loadSidebarCollapsed());
+    useDisplay.getState().hydrate();
+  }, []);
 
   const toggleSidebar = (collapsed: boolean) => {
     setSidebarCollapsed(collapsed);
