@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
+import { ASSETS_DIR } from "@/lib/tree";
 import Dialog from "./Dialog";
 
 /**
  * 未参照画像の検出と手動削除。
- * 参照走査は本文のMarkdown画像/リンク・埋め込み・frontmatter内の画像指定を対象とする。
- * いきなり削除せず候補一覧から選択して削除する。
+ * 候補は `_assets/` 配下の画像のみ。参照走査は本文のMarkdown画像/リンク・埋め込み・
+ * frontmatter内の画像指定を対象とする。いきなり削除せず候補一覧から選択して削除する。
  */
 export default function UnusedImagesDialog({ onClose }: { onClose: () => void }) {
   const getUnusedImages = useStore((s) => s.getUnusedImages);
@@ -40,12 +41,13 @@ export default function UnusedImagesDialog({ onClose }: { onClose: () => void })
     <Dialog title="未参照画像の検出" onClose={onClose} wide>
       {unused.length === 0 ? (
         <p className="py-4 text-sm text-neutral-500">
-          どのドキュメントからも参照されていない画像はありません 🎉
+          <code>{ASSETS_DIR}/</code> 内にどのドキュメントからも参照されていない画像はありません 🎉
         </p>
       ) : (
         <>
           <p className="mb-3 text-sm text-neutral-600 dark:text-neutral-400">
-            以下の画像はどのドキュメント（本文・frontmatter・埋め込み）からも参照されていません。
+            <code>{ASSETS_DIR}/</code>{" "}
+            内の以下の画像はどのドキュメント（本文・frontmatter・埋め込み）からも参照されていません。
             削除するものを選択してください。
           </p>
           <div className="mb-4 max-h-72 overflow-y-auto rounded-lg border border-neutral-200 dark:border-neutral-700">
