@@ -60,7 +60,9 @@ export default function DocPage({ path }: { path: string }) {
   };
 
   return (
-    <div className="dv-doc mx-auto max-w-4xl px-8 py-6">
+    // 左だけ広いのは、エディタのブロックハンドル（⠿ / ＋）が本文の左外に出るぶんの余白。
+    // タイトル・プロパティ・本文はすべてこの中にあるので、幅は揃ったまま
+    <div className="dv-doc mx-auto max-w-4xl py-6 pr-8 pl-[5.5rem]">
       {/* ツールバー */}
       <div className="mb-4 flex items-center gap-1 text-sm">
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-neutral-400">{path}</span>

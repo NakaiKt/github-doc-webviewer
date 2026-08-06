@@ -114,7 +114,11 @@ body {
   --crepe-shadow-2: 0px 1px 2px 0px rgba(0, 0, 0, 0.5), 0px 2px 6px 2px rgba(0, 0, 0, 0.35);
 }
 
-.milkdown .ProseMirror {
+/* Crepe既定の `padding: 60px 120px` を外し、本文の幅をタイトル・プロパティ欄と揃える。
+   Crepeのstyle.cssは動的importで後から読まれるので、`.docvault-editor` を1段かぶせて勝たせる。
+   ブロックハンドル（⠿ / ＋）は本文の左外に絶対配置されるが、
+   ページ側の余白（.dv-doc の左右パディング）に収まるので追加の逃がしは不要。 */
+.docvault-editor .milkdown .ProseMirror {
   padding: 0 0 2rem 0;
 }
 
@@ -134,24 +138,70 @@ body {
   color: var(--alert-color);
   margin-bottom: 0.25rem;
 }
-/* 編集モード（ProseMirror）でのAlerts。Decorationでクラスが付いた引用ブロックを色付けする。
-   マーカー行（`[!NOTE]`）はMarkdownの実体なので消さず、見出しとして目立たせるだけにする。 */
+/* エディタ上のAlerts。Decorationでクラスが付いた引用ブロックを色付けする。
+   マーカー（`[!NOTE]`）はMarkdownの実体なのでDOMからは消さず、
+   カーソルが入っていない間だけGitHubと同じ「アイコン＋ラベル」に見せ替える。 */
 .milkdown .ProseMirror blockquote.md-alert-edit {
   border-left: 4px solid var(--alert-color);
   border-radius: 0 6px 6px 0;
   background: color-mix(in srgb, var(--alert-color) 6%, transparent);
-  padding: 0.25rem 1rem;
+  padding: 0.5rem 1rem;
 }
-.milkdown .ProseMirror .md-alert-edit-marker {
+/* カーソルが入っているとき: マーカーの実体を色付きで見せる（編集・削除できる） */
+.milkdown .ProseMirror blockquote.md-alert-edit.dv-editing .md-alert-edit-marker {
   color: var(--alert-color);
   font-weight: 600;
 }
+/* カーソルが外にあるとき: マーカーの文字を潰し、アイコンとラベルだけを行として見せる */
+.milkdown .ProseMirror blockquote.md-alert-edit:not(.dv-editing) .md-alert-edit-marker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0;
+  line-height: 1.5;
+  margin-bottom: 0.25rem;
+  color: var(--alert-color);
+  font-weight: 600;
+}
+.milkdown .ProseMirror blockquote.md-alert-edit:not(.dv-editing) .md-alert-edit-marker::before {
+  content: "";
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  mask: var(--alert-icon) center / contain no-repeat;
+  -webkit-mask: var(--alert-icon) center / contain no-repeat;
+}
+.milkdown .ProseMirror blockquote.md-alert-edit:not(.dv-editing) .md-alert-edit-marker::after {
+  content: attr(data-alert-label);
+  font-size: 0.9rem;
+}
+/* マーカー直後の改行。ラベルが1行を占有するので非編集時は隠す */
+.milkdown .ProseMirror blockquote.md-alert-edit:not(.dv-editing) .md-alert-edit-break {
+  display: none;
+}
 
-.md-alert-note { --alert-color: #0969da; }
-.md-alert-tip { --alert-color: #1a7f37; }
-.md-alert-important { --alert-color: #8250df; }
-.md-alert-warning { --alert-color: #9a6700; }
-.md-alert-caution { --alert-color: #cf222e; }
+/* 色とアイコンは閲覧描画（ReadView / lucide）と揃える */
+.md-alert-note {
+  --alert-color: #0969da;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E");
+}
+.md-alert-tip {
+  --alert-color: #1a7f37;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5'/%3E%3Cpath d='M9 18h6'/%3E%3Cpath d='M10 22h4'/%3E%3C/svg%3E");
+}
+.md-alert-important {
+  --alert-color: #8250df;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/%3E%3Cpath d='M12 7v2'/%3E%3Cpath d='M12 13h.01'/%3E%3C/svg%3E");
+}
+.md-alert-warning {
+  --alert-color: #9a6700;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+}
+.md-alert-caution {
+  --alert-color: #cf222e;
+  --alert-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16h.01'/%3E%3Cpath d='M12 8v4'/%3E%3Cpath d='M15.312 2a2 2 0 0 1 1.414.586l4.688 4.688A2 2 0 0 1 22 8.688v6.624a2 2 0 0 1-.586 1.414l-4.688 4.688a2 2 0 0 1-1.414.586H8.688a2 2 0 0 1-1.414-.586l-4.688-4.688A2 2 0 0 1 2 15.312V8.688a2 2 0 0 1 .586-1.414l4.688-4.688A2 2 0 0 1 8.688 2z'/%3E%3C/svg%3E");
+}
 .dark .md-alert-note { --alert-color: #4493f8; }
 .dark .md-alert-tip { --alert-color: #3fb950; }
 .dark .md-alert-important { --alert-color: #ab7df8; }
@@ -315,7 +365,16 @@ body {
   font-weight: 600;
 }
 
-/* ---- コードブロック（編集モード / CodeMirror） ---- */
+/* ---- 画像 ----
+   Crepeの既定は `object-fit: cover; min-height: 100px` で、横長の画像が
+   高さ100pxに切り取られてしまう。縦横比を保って収める。 */
+.docvault-editor .milkdown .milkdown-image-block > .image-wrapper img {
+  object-fit: contain;
+  min-height: 0;
+  height: auto;
+}
+
+/* ---- コードブロック（CodeMirror） ---- */
 .milkdown .milkdown-code-block {
   background: var(--code-bg);
   border: 1px solid var(--code-border);
