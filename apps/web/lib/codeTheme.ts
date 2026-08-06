@@ -24,9 +24,15 @@ const editorTheme = EditorView.theme({
     fontFamily: "var(--crepe-font-code)",
   },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--code-fg)" },
-  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
-    backgroundColor: "var(--code-selection)",
+  // CodeMirrorの基本テーマは選択範囲の色を `&light` / `&dark` 付きの高詳細度セレクタで当ててくる
+  // （フォーカス時は `&dark.cm-focused > .cm-scroller > .cm-selectionLayer ...` で #233 の黒）。
+  // こちらはCSS変数1本でライト/ダーク両方を賄う方針なので、明示的に上書きする。
+  // なお drawSelection が有効なのでネイティブの選択は隠されており、
+  // 実際に見えているのはこの `.cm-selectionBackground` だけ。
+  ".cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground": {
+    background: "var(--code-selection) !important",
   },
+  ".cm-content ::selection": { backgroundColor: "var(--code-selection)" },
   ".cm-activeLine": { backgroundColor: "var(--code-active-line)" },
   ".cm-gutters": {
     backgroundColor: "transparent",

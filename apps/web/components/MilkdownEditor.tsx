@@ -97,8 +97,6 @@ export default function MilkdownEditor({
               // 折り返し表示（表示設定）。CodeMirror側の実測に関わるのでCSSではなく拡張で行う
               extensions: codeWrap ? [CodeMirrorView.lineWrapping] : [],
               copyText: "コピー",
-              // コピーは既存のボタンが行う。ここでは押したことが分かるように通知を出す
-              onCopy: () => useStore.getState().setToast("コードをコピーしました"),
               previewLabel: "プレビュー",
               previewLoading: "図を描画中…",
               // mermaid以外は renderPreview が null を返すのでプレビューは付かず、
@@ -158,6 +156,38 @@ export default function MilkdownEditor({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fallback]);
+
+  // コピーのフィードバックはボタン自身で返す（「コピー」→「✓」）。
+  // ボタンを描画しているのはCrepe内部のVueコンポーネントなので、
+  // Reactの状態ではなくクラスの付け外しで一時的に見た目を変える。
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let marked: HTMLElement | null = null;
+    const reset = () => {
+      marked?.classList.remove("dv-copied");
+      marked = null;
+      timer = null;
+    };
+    const onClick = (event: MouseEvent) => {
+      const button = (event.target as HTMLElement | null)?.closest?.(
+        ".milkdown-code-block .copy-button"
+      );
+      if (!(button instanceof HTMLElement)) return;
+      if (timer) clearTimeout(timer);
+      marked?.classList.remove("dv-copied");
+      button.classList.add("dv-copied");
+      marked = button;
+      timer = setTimeout(reset, 1500);
+    };
+    root.addEventListener("click", onClick);
+    return () => {
+      root.removeEventListener("click", onClick);
+      if (timer) clearTimeout(timer);
+      reset();
+    };
+  }, []);
 
   if (fallback) {
     return (

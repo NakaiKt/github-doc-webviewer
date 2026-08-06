@@ -125,8 +125,8 @@ function RepoImage({ src, alt, fromPath }: { src?: string; alt?: string; fromPat
 }
 
 /**
- * コードブロック。コピーボタンを重ねて、押したことがその場で分かるようにする
- * （エディタ側のコードブロックはMilkdownのコピーボタン + onCopy が同じ役割を担う）。
+ * コードブロック。コピーボタンを重ね、押したら一時的に「コピー」→「✓」に変えて
+ * ボタン自身でフィードバックを返す（エディタ側のコピーボタンも同じ挙動）。
  */
 function CodeBlock({ children }: { children?: React.ReactNode }) {
   const preRef = useRef<HTMLPreElement>(null);
@@ -148,7 +148,6 @@ function CodeBlock({ children }: { children?: React.ReactNode }) {
       return;
     }
     setCopied(true);
-    useStore.getState().setToast("コードをコピーしました");
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setCopied(false), 1500);
   };
@@ -162,8 +161,13 @@ function CodeBlock({ children }: { children?: React.ReactNode }) {
         className="dv-pre-copy"
         data-copied={copied}
       >
-        {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-        {copied ? "コピーしました" : "コピー"}
+        {copied ? (
+          <Check className="h-3.5 w-3.5" />
+        ) : (
+          <>
+            <Copy className="h-3.5 w-3.5" /> コピー
+          </>
+        )}
       </button>
       <pre ref={preRef}>{children}</pre>
     </div>

@@ -365,6 +365,31 @@ body {
   font-weight: 600;
 }
 
+/* ---- コードブロックのコピーボタン（エディタ側 / Milkdown） ----
+   押した直後だけ「コピー」→「✓」に差し替える（クラスの付け外しはMilkdownEditor）。
+   Crepe側の `opacity: 0`（ホバー時のみ表示）に勝つよう詳細度を上げている。 */
+.docvault-editor .milkdown .milkdown-code-block .tools-button-group button.copy-button {
+  /* 「コピー」と「✓」で幅が変わってボタンが動かないように固定する */
+  min-width: 4.75rem;
+}
+.docvault-editor .milkdown .milkdown-code-block .tools-button-group button.copy-button.dv-copied {
+  opacity: 1;
+  font-size: 0;
+  color: #1a7f37;
+}
+.dark .docvault-editor .milkdown .milkdown-code-block .tools-button-group button.copy-button.dv-copied {
+  color: #3fb950;
+}
+.docvault-editor .milkdown .milkdown-code-block .copy-button.dv-copied .milkdown-icon {
+  display: none;
+}
+.docvault-editor .milkdown .milkdown-code-block .copy-button.dv-copied::after {
+  content: "✓";
+  font-size: 0.8125rem;
+  line-height: 1rem;
+  font-weight: 700;
+}
+
 /* ---- 画像 ----
    Crepeの既定は `object-fit: cover; min-height: 100px` で、横長の画像が
    高さ100pxに切り取られてしまう。縦横比を保って収める。 */
@@ -395,7 +420,10 @@ body {
   right: 0.5rem;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.25rem;
+  /* 「コピー」→「✓」で幅が変わってボタンが動かないように固定する */
+  min-width: 4.5rem;
   padding: 0.15rem 0.5rem;
   border: 1px solid var(--code-border);
   border-radius: 999px;
