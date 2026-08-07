@@ -9,6 +9,7 @@ import {
   ImageOff,
   LayoutTemplate,
   LogOut,
+  MessageSquarePlus,
   Moon,
   PanelLeftClose,
   Plus,
@@ -24,6 +25,7 @@ import SearchBox from "./SearchBox";
 import TreeView from "./TreeView";
 import NewDocDialog from "./NewDocDialog";
 import UnusedImagesDialog from "./UnusedImagesDialog";
+import FeedbackDialog from "./FeedbackDialog";
 
 export default function Sidebar({ onCollapse }: { onCollapse: () => void }) {
   const repo = useStore((s) => s.repo);
@@ -42,6 +44,7 @@ export default function Sidebar({ onCollapse }: { onCollapse: () => void }) {
   const [newDocOpen, setNewDocOpen] = useState(false);
   const [newDocDir, setNewDocDir] = useState("");
   const [unusedOpen, setUnusedOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const templates = useMemo(
     () =>
@@ -196,6 +199,13 @@ export default function Sidebar({ onCollapse }: { onCollapse: () => void }) {
           <ImageOff className="h-4 w-4" />
         </button>
         <button
+          onClick={() => setFeedbackOpen(true)}
+          title="要望・不具合を送る"
+          className="rounded p-1.5 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-800"
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+        </button>
+        <button
           onClick={toggleTheme}
           title="ダークモード/ライトモード切り替え"
           className="rounded p-1.5 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-800"
@@ -218,6 +228,7 @@ export default function Sidebar({ onCollapse }: { onCollapse: () => void }) {
         <NewDocDialog initialDir={newDocDir} onClose={() => setNewDocOpen(false)} />
       )}
       {unusedOpen && <UnusedImagesDialog onClose={() => setUnusedOpen(false)} />}
+      {feedbackOpen && <FeedbackDialog onClose={() => setFeedbackOpen(false)} />}
     </aside>
   );
 }
