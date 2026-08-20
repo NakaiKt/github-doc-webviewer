@@ -33,6 +33,11 @@ export interface RepoInfo {
   permissions?: { push?: boolean };
 }
 
+export interface IssueResult {
+  number: number;
+  htmlUrl: string;
+}
+
 export interface TreeEntry {
   path: string;
   mode: string;
@@ -134,6 +139,20 @@ export class GitHubClient {
   async getUser(): Promise<{ login: string; name: string | null; avatarUrl: string }> {
     const u = await this.request<any>("GET", "/user");
     return { login: u.login, name: u.name, avatarUrl: u.avatar_url };
+  }
+
+  /**
+   * Issueを作成する。
+   * 公開リポジトリへのIssue作成はGitHubが誰にでも許している操作で、トークンの権限を参照しない。
+   * そのため対象がPATのスコープ外（他人の公開リポ）でも通り、vault用のPATをそのまま使える。
+   * labels/assigneesはpush権限がないと黙って捨てられるため送らない（ラベル付与はActions側で行う）。
+   */
+  async createIssue(repo: RepoRef, title: string, body: string): Promise<IssueResult> {
+    const r = await this.request<any>("POST", `/repos/${repo.owner}/${repo.name}/issues`, {
+      title,
+      body,
+    });
+    return { number: r.number, htmlUrl: r.html_url };
   }
 
   /** PATでアクセスできるリポジトリ一覧（push日時降順）。 */
