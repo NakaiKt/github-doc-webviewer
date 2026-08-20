@@ -21,7 +21,7 @@ import {
   findUnusedImages,
 } from "@docvault/core";
 import { rebuildSearchIndex } from "./search";
-import { isDocPath, isVisibleDoc, TEMPLATES_DIR } from "./tree";
+import { ASSETS_DIR, isAssetPath, isDocPath, isVisibleDoc, TEMPLATES_DIR } from "./tree";
 import { saveRepoSelection, saveToken } from "./settings";
 
 export interface FileEntry {
@@ -669,15 +669,15 @@ export const useStore = create<DocVaultState>((set, get) => {
       return get().moveDoc(path, newPath);
     },
 
-    /** 画像等のバイナリをassets/に追加する（次回push時にコミットされる）。 */
+    /** 画像等のバイナリを_assets/に追加する（次回push時にコミットされる）。 */
     uploadAsset: (fileName, base64) => {
       const safe = fileName.replace(/[^\w.\-()（）　-鿿]/g, "_");
       const stamp = Date.now().toString(36);
-      let path = `assets/${stamp}-${safe}`;
+      let path = `${ASSETS_DIR}/${stamp}-${safe}`;
       const files = { ...get().files };
       let n = 2;
       while (files[path]) {
-        path = `assets/${stamp}-${n}-${safe}`;
+        path = `${ASSETS_DIR}/${stamp}-${n}-${safe}`;
         n++;
       }
       files[path] = {
@@ -750,12 +750,17 @@ export const useStore = create<DocVaultState>((set, get) => {
       await get().push();
     },
 
+    /**
+     * 未参照画像の検出。候補は `_assets/` 配下の画像だけに限定する
+     * （ドキュメントと同階層に手で置かれた画像などは削除候補にしない）。
+     * 参照側の走査は全Markdownが対象なので、`_assets/` 外から参照されていても未参照とは判定しない。
+     */
     getUnusedImages: () => {
       const files = get().files;
       const mdFiles = Object.values(files)
         .filter((f) => f.isMarkdown && f.content != null)
         .map((f) => ({ path: f.path, content: f.content! }));
-      const imagePaths = Object.keys(files).filter((p) => isImagePath(p));
+      const imagePaths = Object.keys(files).filter((p) => isAssetPath(p) && isImagePath(p));
       return findUnusedImages(mdFiles, imagePaths);
     },
   };

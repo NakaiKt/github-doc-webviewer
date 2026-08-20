@@ -64,7 +64,7 @@ export default function MilkdownEditor({
           },
           featureConfigs: {
             [Crepe.Feature.ImageBlock]: {
-              // 貼り付け/選択された画像を assets/ に保存し、相対パスで参照する
+              // 貼り付け/選択された画像を _assets/ に保存し、相対パスで参照する
               onUpload: async (file: File) => {
                 const buf = new Uint8Array(await file.arrayBuffer());
                 let bin = "";

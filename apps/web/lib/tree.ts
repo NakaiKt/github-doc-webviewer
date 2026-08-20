@@ -8,10 +8,18 @@ export interface TreeFolder {
 }
 
 export const TEMPLATES_DIR = "_templates";
-export const ASSETS_DIR = "assets";
+export const ASSETS_DIR = "_assets";
 
 export function isDocPath(path: string): boolean {
   return path.endsWith(".md") || path.endsWith(".markdown");
+}
+
+/**
+ * アップロード先ディレクトリ（`_assets/`）配下のファイルか。
+ * 未参照画像の検出・削除は、アプリが自分で置いた画像だけを対象にするためこれで絞り込む。
+ */
+export function isAssetPath(path: string): boolean {
+  return path.startsWith(`${ASSETS_DIR}/`);
 }
 
 /** ドキュメントツリーに表示するファイルか（mdのみ、隠しファイル/テンプレートフォルダは除外）。 */
